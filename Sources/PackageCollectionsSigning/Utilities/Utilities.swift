@@ -1,0 +1,25 @@
+/*
+ This source file is part of the Swift.org open source project
+
+ Copyright (c) 2021 Apple Inc. and the Swift project authors
+ Licensed under Apache License v2.0 with Runtime Library Exception
+
+ See http://swift.org/LICENSE.txt for license information
+ See http://swift.org/CONTRIBUTORS.txt for Swift project authors
+ */
+
+import Foundation
+
+extension DataProtocol {
+    func copyBytes() -> [UInt8] {
+        if let array = self.withContiguousStorageIfAvailable({ buffer in [UInt8](buffer) }) {
+            return array
+        } else {
+            let buffer = UnsafeMutableBufferPointer<UInt8>.allocate(capacity: self.count)
+            defer { buffer.deallocate() }
+
+            self.copyBytes(to: buffer)
+            return [UInt8](buffer)
+        }
+    }
+}

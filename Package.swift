@@ -20,7 +20,7 @@ let macOSPlatform: SupportedPlatform
 if let deploymentTarget = ProcessInfo.processInfo.environment["SWIFTPM_MACOS_DEPLOYMENT_TARGET"] {
     macOSPlatform = .macOS(deploymentTarget)
 } else {
-    macOSPlatform = .macOS(.v10_10)
+    macOSPlatform = .macOS(.v10_15)
 }
 
 let package = Package(
@@ -147,16 +147,21 @@ let package = Package(
             dependencies: ["SwiftToolsSupport-auto", "Basics", "PackageLoading", "PackageModel", "SourceControl"]),
 
         // MARK: Package Collections
-        
-        .target(
-            /** Package collections models */
-            name: "PackageCollectionsModel",
-            dependencies: []),
 
         .target(
             /** Data structures and support for package collections */
             name: "PackageCollections",
             dependencies: ["SwiftToolsSupport-auto", "Basics", "PackageModel", "SourceControl", "PackageCollectionsModel"]),
+        
+        .target(
+            /** Package collections models */
+            name: "PackageCollectionsModel",
+            dependencies: []),
+        
+        .target(
+            /** Package collections models */
+            name: "PackageCollectionsSigning",
+            dependencies: ["Crypto"]),
 
         // MARK: Package Manager Functionality
 
@@ -263,11 +268,14 @@ let package = Package(
             name: "PackageGraphPerformanceTests",
             dependencies: ["PackageGraph", "SPMTestSupport"]),
         .testTarget(
+            name: "PackageCollectionsTests",
+            dependencies: ["PackageCollections", "SPMTestSupport"]),
+        .testTarget(
             name: "PackageCollectionsModelTests",
             dependencies: ["PackageCollectionsModel"]),
         .testTarget(
-            name: "PackageCollectionsTests",
-            dependencies: ["SPMTestSupport", "PackageCollections"]),
+            name: "PackageCollectionsSigningTests",
+            dependencies: ["PackageCollectionsSigning", "SPMTestSupport"]),
         .testTarget(
             name: "SourceControlTests",
             dependencies: ["SourceControl", "SPMTestSupport"]),
@@ -323,6 +331,7 @@ if ProcessInfo.processInfo.environment["SWIFTCI_USE_LOCAL_DEPS"] == nil {
         // dependency version changes here with those projects.
         .package(url: "https://github.com/apple/swift-argument-parser.git", .upToNextMinor(from: "0.3.1")),
         .package(url: "https://github.com/apple/swift-driver.git", .branch(relatedDependenciesBranch)),
+        .package(url: "https://github.com/apple/swift-crypto.git", .branch(relatedDependenciesBranch)),
     ]
 } else {
     package.dependencies += [
