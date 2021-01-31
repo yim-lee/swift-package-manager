@@ -8,9 +8,9 @@
  See http://swift.org/CONTRIBUTORS.txt for Swift project authors
  */
 
-import Foundation
 #if !(os(macOS) || os(iOS) || os(watchOS) || os(tvOS))
 @_implementationOnly import CCryptoBoringSSL
+import Foundation
 
 protocol BoringSSLKey {}
 

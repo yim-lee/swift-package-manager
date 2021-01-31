@@ -8,7 +8,7 @@
  See http://swift.org/CONTRIBUTORS.txt for Swift project authors
  */
 
-import Foundation
+import struct Foundation.Data
 
 protocol PrivateKey {
     /// Creates a private key from PEM.

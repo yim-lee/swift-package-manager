@@ -8,7 +8,8 @@
  See http://swift.org/CONTRIBUTORS.txt for Swift project authors
  */
 
-import Foundation
+import struct Foundation.Data
+
 #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
 import Security
 #else
@@ -81,7 +82,6 @@ struct CoreRSAPublicKey: PublicKey {
 #else
 final class BoringSSLRSAPrivateKey: PrivateKey, BoringSSLKey {
     let underlying: UnsafeMutablePointer<CCryptoBoringSSL.RSA>
-    let algorithm: OpaquePointer = CCryptoBoringSSL_EVP_sha256()
 
     deinit {
         CCryptoBoringSSL_RSA_free(self.underlying)
@@ -107,7 +107,6 @@ final class BoringSSLRSAPrivateKey: PrivateKey, BoringSSLKey {
 
 final class BoringSSLRSAPublicKey: PublicKey, BoringSSLKey {
     let underlying: UnsafeMutablePointer<CCryptoBoringSSL.RSA>
-    let algorithm: OpaquePointer = CCryptoBoringSSL_EVP_sha256()
 
     deinit {
         CCryptoBoringSSL_RSA_free(self.underlying)
