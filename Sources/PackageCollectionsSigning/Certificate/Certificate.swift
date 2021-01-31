@@ -65,6 +65,46 @@ struct CoreCertificate {
             organizationalUnit: props[kSecOIDOrganizationalUnitName as String]
         )
     }
+
+    func publicKey() throws -> PublicKey {
+        guard let key = SecCertificateCopyKey(self.underlying) else {
+            throw CertificateError.keyExtractionFailure
+        }
+
+        var error: Unmanaged<CFError>?
+        guard let data = SecKeyCopyExternalRepresentation(key, &error) as Data? else {
+            throw error.map { $0.takeRetainedValue() as Error } ?? CertificateError.keyExtractionFailure
+        }
+
+        switch try self.keyType(of: key) {
+        case .RSA:
+            return try CoreRSAPublicKey(data: data)
+        case .EC:
+            return try ECPublicKey(data: data)
+        }
+    }
+
+    func keyType() throws -> KeyType {
+        guard let key = SecCertificateCopyKey(self.underlying) else {
+            throw CertificateError.keyExtractionFailure
+        }
+        return try self.keyType(of: key)
+    }
+
+    private func keyType(of key: SecKey) throws -> KeyType {
+        guard let attributes = SecKeyCopyAttributes(key) as? [CFString: Any],
+            let keyType = attributes[kSecAttrKeyType] as? String else {
+            throw CertificateError.indeterminateKeyType
+        }
+
+        if keyType == (kSecAttrKeyTypeRSA as String) {
+            return .RSA
+        } else if keyType == (kSecAttrKeyTypeEC as String) {
+            return .EC
+        } else {
+            throw CertificateError.unsupportedKeyType
+        }
+    }
 }
 
 // MARK: - Certificate implementation using BoringSSL
@@ -101,6 +141,53 @@ final class BoringSSLCertificate {
             throw CertificateError.nameExtractionFailure
         }
         return CertificateName(x509Name: issuer)
+    }
+
+    func publicKey() throws -> PublicKey {
+        guard let key = CCryptoBoringSSL_X509_get_pubkey(self.underlying) else {
+            throw CertificateError.keyExtractionFailure
+        }
+        defer { CCryptoBoringSSL_EVP_PKEY_free(key) }
+
+        var buffer: UnsafeMutablePointer<CUnsignedChar>?
+        defer { CCryptoBoringSSL_OPENSSL_free(buffer) }
+
+        let length = CCryptoBoringSSL_i2d_PublicKey(key, &buffer)
+        guard length > 0 else {
+            throw CertificateError.keyExtractionFailure
+        }
+
+        let bytes = UnsafeBufferPointer(start: buffer, count: Int(length)).map { $0 }
+        let data = Data(bytes)
+
+        switch try self.keyType(of: key) {
+        case .RSA:
+            return try BoringSSLRSAPublicKey(data: data)
+        case .EC:
+            return try ECPublicKey(data: data)
+        }
+    }
+
+    func keyType() throws -> KeyType {
+        guard let key = CCryptoBoringSSL_X509_get_pubkey(self.underlying) else {
+            throw CertificateError.keyExtractionFailure
+        }
+        defer { CCryptoBoringSSL_EVP_PKEY_free(key) }
+
+        return try self.keyType(of: key)
+    }
+
+    private func keyType(of key: UnsafeMutablePointer<EVP_PKEY>) throws -> KeyType {
+        let algorithm = CCryptoBoringSSL_OBJ_obj2nid(self.underlying.pointee.cert_info.pointee.key.pointee.algor.pointee.algorithm)
+
+        switch algorithm {
+        case NID_rsaEncryption:
+            return .RSA
+        case NID_X9_62_id_ecPublicKey:
+            return .EC
+        default:
+            throw CertificateError.unsupportedKeyType
+        }
     }
 }
 
@@ -156,4 +243,7 @@ struct CertificateName {
 enum CertificateError: Error {
     case initializationFailure
     case nameExtractionFailure
+    case keyExtractionFailure
+    case indeterminateKeyType
+    case unsupportedKeyType
 }

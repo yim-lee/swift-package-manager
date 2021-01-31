@@ -8,6 +8,10 @@
 
 add_library(PackageCollectionsSigning
   Certificate/Certificate.swift
+  Key/BoringSSLKey.swift
+  Key/Key.swift
+  Key/Key+EC.swift
+  Key/Key+RSA.swift
   Utilities/Utilities.swift)
 #target_link_libraries(PackageCollectionsSigning PUBLIC
 #)

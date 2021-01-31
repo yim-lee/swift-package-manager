@@ -10,6 +10,8 @@
 
 import Foundation
 
+// Source: https://github.com/vapor/jwt-kit/blob/master/Sources/JWTKit/Utilities/Utilities.swift
+
 extension DataProtocol {
     func copyBytes() -> [UInt8] {
         if let array = self.withContiguousStorageIfAvailable({ buffer in [UInt8](buffer) }) {
