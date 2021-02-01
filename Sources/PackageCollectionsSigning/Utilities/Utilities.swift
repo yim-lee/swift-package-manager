@@ -25,3 +25,9 @@ extension DataProtocol {
         }
     }
 }
+
+extension UInt8 {
+    static var period: UInt8 {
+        Character(".").asciiValue!
+    }
+}

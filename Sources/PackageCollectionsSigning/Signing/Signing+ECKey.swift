@@ -12,14 +12,16 @@ import struct Foundation.Data
 
 import Crypto
 
-extension ECPrivateKey: MessageSigner {
+// MARK: - MessageSigner and MessageValidator conformance
+
+extension ECPrivateKey {
     func sign(message: Data) throws -> Data {
         let signature = try self.underlying.signature(for: SHA256.hash(data: message))
         return signature.rawRepresentation
     }
 }
 
-extension ECPublicKey: MessageValidator {
+extension ECPublicKey {
     func isValidSignature(_ signature: Data, for message: Data) throws -> Bool {
         return try self.underlying.isValidSignature(.init(rawRepresentation: signature), for: SHA256.hash(data: message))
     }

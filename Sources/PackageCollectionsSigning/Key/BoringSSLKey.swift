@@ -16,10 +16,8 @@ protocol BoringSSLKey {}
 
 extension BoringSSLKey {
     // Source: https://github.com/vapor/jwt-kit/blob/master/Sources/JWTKit/Utilities/OpenSSLSigner.swift
-    static func load<Data, T>(
-        pem data: Data,
-        _ closure: (UnsafeMutablePointer<BIO>) -> (T?)
-    ) throws -> T where Data: DataProtocol {
+    static func load<Data, T>(pem data: Data,
+                              _ closure: (UnsafeMutablePointer<BIO>) -> (T?)) throws -> T where Data: DataProtocol {
         let bytes = data.copyBytes()
 
         let bio = CCryptoBoringSSL_BIO_new_mem_buf(bytes, numericCast(bytes.count))

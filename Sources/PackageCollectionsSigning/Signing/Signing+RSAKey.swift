@@ -16,10 +16,10 @@ import Security
 @_implementationOnly import CCryptoBoringSSL
 #endif
 
-// MARK: - Signer and verifier implementation using the Security framework
+// MARK: - MessageSigner and MessageValidator conformance using the Security framework
 
 #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
-extension CoreRSAPrivateKey: MessageSigner {
+extension CoreRSAPrivateKey {
     func sign(message: Data) throws -> Data {
         var error: Unmanaged<CFError>?
         guard let signature = SecKeyCreateSignature(self.underlying,
@@ -32,7 +32,7 @@ extension CoreRSAPrivateKey: MessageSigner {
     }
 }
 
-extension CoreRSAPublicKey: MessageValidator {
+extension CoreRSAPublicKey {
     func isValidSignature(_ signature: Data, for message: Data) throws -> Bool {
         SecKeyVerifySignature(
             self.underlying,
@@ -44,12 +44,12 @@ extension CoreRSAPublicKey: MessageValidator {
     }
 }
 
-// MARK: - Signer and verifier implementation using OpenSSL
+// MARK: - MessageSigner and MessageValidator conformance using BoringSSL
 
 #else
 // Reference: https://github.com/vapor/jwt-kit/blob/master/Sources/JWTKit/RSA/RSASigner.swift
 
-extension BoringSSLRSAPrivateKey: MessageSigner, BoringSSLSigning {
+extension BoringSSLRSAPrivateKey: BoringSSLSigning {
     func sign(message: Data) throws -> Data {
         guard let algorithm = CCryptoBoringSSL_EVP_sha256() else {
             throw SigningError.algorithmFailure
@@ -78,7 +78,7 @@ extension BoringSSLRSAPrivateKey: MessageSigner, BoringSSLSigning {
     }
 }
 
-extension BoringSSLRSAPublicKey: MessageValidator, BoringSSLSigning {
+extension BoringSSLRSAPublicKey: BoringSSLSigning {
     func isValidSignature(_ signature: Data, for message: Data) throws -> Bool {
         guard let algorithm = CCryptoBoringSSL_EVP_sha256() else {
             throw SigningError.algorithmFailure

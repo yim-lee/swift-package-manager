@@ -10,7 +10,7 @@
 
 import struct Foundation.Data
 
-protocol PrivateKey {
+protocol PrivateKey: MessageSigner {
     /// Creates a private key from PEM.
     ///
     /// - Parameters:
@@ -18,7 +18,7 @@ protocol PrivateKey {
     init(pem: String) throws
 }
 
-protocol PublicKey {
+protocol PublicKey: MessageValidator {
     /// Creates a public key from raw bytes.
     ///
     /// Refer to implementation for details on what representation the raw bytes should be.
