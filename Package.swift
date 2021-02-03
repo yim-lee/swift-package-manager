@@ -161,7 +161,7 @@ let package = Package(
         .target(
             /** Package collections models */
             name: "PackageCollectionsSigning",
-            dependencies: ["PackageCollectionsModel", "Crypto"]),
+            dependencies: ["PackageCollectionsModel", "Crypto", "Basics"]),
 
         // MARK: Package Manager Functionality
 

@@ -749,7 +749,7 @@ final class PackageCollectionsTests: XCTestCase {
     func testTargetsSearchPerformance() throws {
         #if ENABLE_COLLECTION_PERF_TESTS
         #else
-        try XCTSkipIf(true)
+//        try XCTSkipIf(true)
         #endif
 
         let configuration = PackageCollections.Configuration()
@@ -776,6 +776,7 @@ final class PackageCollectionsTests: XCTestCase {
         let searchResult = try tsc_await { callback in packageCollections.findTargets(targetName, searchType: .exactMatch, callback: callback) }
         XCTAssert(searchResult.items.count > 0, "should get results")
         let delta = Date().timeIntervalSince(start)
+print("\(delta)")
         XCTAssert(delta < 1.0, "should search quickly, took \(delta)")
     }
 
