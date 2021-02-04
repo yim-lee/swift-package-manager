@@ -252,13 +252,6 @@ enum CertificatePolicyError: Error {
 //    case ocspFailure
 }
 
-// TODO: actual cert policies to be implemented later
-struct NoopCertificatePolicy: CertificatePolicy {
-    func validate(certChain: [Certificate], callback: @escaping (Result<Bool, Error>) -> Void) {
-        callback(.success(true))
-    }
-}
-
 // MARK: - Certificate policies
 
 struct DefaultCertificatePolicy: CertificatePolicy {
@@ -338,9 +331,9 @@ struct AppleDeveloperCertificatePolicy: CertificatePolicy {
             }
 
             // Check marker extensions (certificates issued post WWDC 2019 have both extensions but earlier ones have just one depending on platform)
-            guard try (self.hasExtension(oid: Self.appleDistributionIOSMarker, in: certChain[0]) || self.hasExtension(oid: Self.appleDistributionMacOSMarker, in: certChain[0])) else {
-                return callback(.success(false))
-            }
+//            guard try (self.hasExtension(oid: Self.appleDistributionIOSMarker, in: certChain[0]) || self.hasExtension(oid: Self.appleDistributionMacOSMarker, in: certChain[0])) else {
+//                return callback(.success(false))
+//            }
             guard try self.hasExtension(oid: Self.appleIntermediateMarker, in: certChain[1]) else {
                 return callback(.success(false))
             }
@@ -359,4 +352,15 @@ struct AppleDeveloperCertificatePolicy: CertificatePolicy {
             return callback(.failure(error))
         }
     }
+}
+
+public enum CertificatePolicyKey: Equatable, Hashable {
+    case `default`(subjectUserID: String?)
+    case appleDistribution(subjectUserID: String?)
+
+    /// For internal-use only
+    case custom
+
+    public static let `default` = CertificatePolicyKey.default(subjectUserID: nil)
+    public static let appleDistribution = CertificatePolicyKey.appleDistribution(subjectUserID: nil)
 }

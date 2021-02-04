@@ -8,21 +8,57 @@
  See http://swift.org/CONTRIBUTORS.txt for Swift project authors
  */
 
+import Dispatch
 import Foundation
 
+import Basics
 import PackageCollectionsModel
 
 public struct PackageCollectionSigning {
     public typealias Model = PackageCollectionModel.V1
 
-    let certPolicy: CertificatePolicy
+    /// URL of the optional directory containing root certificates to be trusted.
+    let trustedRootCertsDir: URL?
 
-    public init() {
-        self.init(certPolicy: NoopCertificatePolicy())
+    /// Dispatch queue for running async tasks
+    let queue: DispatchQueue
+
+    /// Internal cache/storage of `CertificatePolicy`s
+    private let certPolicies = ThreadSafeKeyValueStore<CertificatePolicyKey, CertificatePolicy>()
+
+    public init(trustedRootCertsDir: URL? = nil, queue: DispatchQueue = DispatchQueue.global()) {
+        self.trustedRootCertsDir = trustedRootCertsDir
+        self.queue = queue
+        self.certPolicies[CertificatePolicyKey.default] = DefaultCertificatePolicy(
+            trustedRootCertsDir: trustedRootCertsDir,
+            expectedSubjectUserID: nil,
+            queue: queue
+        )
     }
 
-    init(certPolicy: CertificatePolicy) {
-        self.certPolicy = certPolicy
+    init(certPolicy: CertificatePolicy, trustedRootCertsDir: URL? = nil, queue: DispatchQueue = DispatchQueue.global()) {
+        self.trustedRootCertsDir = trustedRootCertsDir
+        self.queue = queue
+        self.certPolicies[CertificatePolicyKey.custom] = certPolicy
+    }
+
+    private func getCertificatePolicy(key: CertificatePolicyKey) throws -> CertificatePolicy {
+        switch key {
+        case .default(let subjectUserID):
+            return self.certPolicies.memoize(key) {
+                DefaultCertificatePolicy(trustedRootCertsDir: self.trustedRootCertsDir, expectedSubjectUserID: subjectUserID, queue: self.queue)
+            }
+        case .appleDistribution(let subjectUserID):
+            return self.certPolicies.memoize(key) {
+                AppleDeveloperCertificatePolicy(trustedRootCertsDir: self.trustedRootCertsDir, expectedSubjectUserID: subjectUserID, queue: self.queue)
+            }
+        case .custom:
+            // Custom `CertificatePolicy` can be set using the internal initializer only
+            guard let certPolicy = self.certPolicies[key] else {
+                throw PackageCollectionSigningError.certificatePolicyNotFound
+            }
+            return certPolicy
+        }
     }
 
     /// Signs package collection using the given certificate and key.
@@ -31,12 +67,14 @@ public struct PackageCollectionSigning {
     ///   - collection: The package collection to be signed
     ///   - certChainPaths: Paths to all DER-encoded certificates in the chain. The certificate used for signing
     ///                     must be the first in the array.
+    ///   - certPolicyKey: The key of the `CertificatePolicy` to use for validating certificates
     ///   - certPrivateKeyPath: Path to the private key (*.pem) of the certificate
     ///   - jsonEncoder: The `JSONEncoder` to use
     ///   - callback: The callback to invoke when the signed collection is available.
     public func sign(collection: Model.Collection,
                      certChainPaths: [URL],
                      certPrivateKeyPath: URL,
+                     certPolicyKey: CertificatePolicyKey = .default,
                      jsonEncoder: JSONEncoder = JSONEncoder(),
                      callback: @escaping (Result<Model.SignedCollection, Error>) -> Void) {
         guard !certChainPaths.isEmpty else {
@@ -47,7 +85,9 @@ public struct PackageCollectionSigning {
             // Check that the cert is valid before we do anything
             let certChainData = try certChainPaths.map { try Data(contentsOf: $0) }
             let certChain = try certChainData.map { try Certificate(derEncoded: $0) }
-            self.certPolicy.validate(certChain: certChain) { result in
+
+            let certPolicy = try self.getCertificatePolicy(key: certPolicyKey)
+            certPolicy.validate(certChain: certChain) { result in
                 switch result {
                 case .failure(let error):
                     return callback(.failure(error))
@@ -118,9 +158,11 @@ public struct PackageCollectionSigning {
     ///
     /// - Parameters:
     ///   - signedCollection: The signed package collection
+    ///   - certPolicyKey: The key of the `CertificatePolicy` to use for validating certificates
     ///   - jsonDecoder: The `JSONDecoder` to use
     ///   - callback: The callback to invoke when the result is available.
     public func validate(signedCollection: Model.SignedCollection,
+                         certPolicyKey: CertificatePolicyKey = .default,
                          jsonDecoder: JSONDecoder = JSONDecoder(),
                          callback: @escaping (Result<Bool, Error>) -> Void) {
         guard let signature = signedCollection.signature.signature.data(using: .utf8)?.copyBytes() else {
@@ -144,7 +186,8 @@ public struct PackageCollectionSigning {
             }
 
             // Check that the certificate is valid before we do anything
-            self.certPolicy.validate(certChain: certChain) { result in
+            let certPolicy = try self.getCertificatePolicy(key: certPolicyKey)
+            certPolicy.validate(certChain: certChain) { result in
                 switch result {
                 case .failure(let error):
                     return callback(.failure(error))
@@ -177,6 +220,7 @@ public struct PackageCollectionSigning {
 }
 
 enum PackageCollectionSigningError: Error {
+    case certificatePolicyNotFound
     case emptyCertChain
     case invalidCertChain
     case invalidSignature
