@@ -89,4 +89,85 @@ class CertificatePolicyTests: XCTestCase {
             XCTAssertFalse(try tsc_await { callback in policy.validate(certChain: certChain, callback: callback) })
         }
     }
+
+    func test_validate_appleDeveloperPolicy_happyCase() throws {
+        fixture(name: "Collections") { directoryPath in
+            // This must be an Apple Distribution cert
+            let certPath = directoryPath.appending(components: "Signing", "development.cer")
+            let certificate = try Certificate(derEncoded: Data(try localFileSystem.readFileContents(certPath).contents))
+
+            let intermediateCAPath = directoryPath.appending(components: "Signing", "AppleWWDRCA.cer")
+            let intermediateCA = try Certificate(derEncoded: Data(try localFileSystem.readFileContents(intermediateCAPath).contents))
+
+            let rootCAPath = directoryPath.appending(components: "Signing", "AppleIncRoot.cer")
+            let rootCA = try Certificate(derEncoded: Data(try localFileSystem.readFileContents(rootCAPath).contents))
+
+            let certChain = [certificate, intermediateCA, rootCA]
+
+            // Use verify date outside of cert's validity period
+            #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
+            // The Apple root certs come preinstalled on Apple platforms and they are automatically trusted
+            let policy = AppleDeveloperCertificatePolicy()
+            XCTAssertTrue(try tsc_await { callback in policy.validate(certChain: certChain, callback: callback) })
+            #else
+            // On other platforms we have to specify `trustedRootCertsDir` so the Apple root cert is trusted
+            try withTemporaryDirectory { tmp in
+                try localFileSystem.copy(from: rootCAPath, to: tmp.appending(components: "AppleIncRoot.cer"))
+                let policy = AppleDeveloperCertificatePolicy(trustedRootCertsDir: tmp.asURL)
+                XCTAssertTrue(try tsc_await { callback in policy.validate(certChain: certChain, callback: callback) })
+            }
+            #endif
+        }
+    }
+
+    func test_validate_defaultPolicy_happyCase() throws {
+        fixture(name: "Collections") { directoryPath in
+            let certPath = directoryPath.appending(components: "Signing", "development.cer")
+            let certificate = try Certificate(derEncoded: Data(try localFileSystem.readFileContents(certPath).contents))
+
+            let intermediateCAPath = directoryPath.appending(components: "Signing", "AppleWWDRCA.cer")
+            let intermediateCA = try Certificate(derEncoded: Data(try localFileSystem.readFileContents(intermediateCAPath).contents))
+
+            let rootCAPath = directoryPath.appending(components: "Signing", "AppleIncRoot.cer")
+            let rootCA = try Certificate(derEncoded: Data(try localFileSystem.readFileContents(rootCAPath).contents))
+
+            let certChain = [certificate, intermediateCA, rootCA]
+
+            // Use verify date outside of cert's validity period
+            #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
+            // The Apple root certs come preinstalled on Apple platforms and they are automatically trusted
+            let policy = DefaultCertificatePolicy()
+            XCTAssertTrue(try tsc_await { callback in policy.validate(certChain: certChain, callback: callback) })
+            #else
+            // On other platforms we have to specify `trustedRootCertsDir` so the Apple root cert is trusted
+            try withTemporaryDirectory { tmp in
+                try localFileSystem.copy(from: rootCAPath, to: tmp.appending(components: "AppleIncRoot.cer"))
+                let policy = DefaultCertificatePolicy(trustedRootCertsDir: tmp.asURL)
+                XCTAssertTrue(try tsc_await { callback in policy.validate(certChain: certChain, callback: callback) })
+            }
+            #endif
+        }
+    }
+
+    /*
+     func test_validate_specificAppleDeveloper_happyCase() throws {
+         // This needs to be an Apple Distribution cert
+         let path = URL(fileURLWithPath: #file).deletingLastPathComponent()
+             .appendingPathComponent("Inputs", isDirectory: true).appendingPathComponent("development.cer")
+         let certificate = try Certificate(derEncoded: Data(contentsOf: path))
+
+         let intermediateCAPath = URL(fileURLWithPath: #file).deletingLastPathComponent()
+             .appendingPathComponent("Inputs", isDirectory: true).appendingPathComponent("AppleWWDRCA.cer")
+         let intermediateCA = try Certificate(derEncoded: Data(contentsOf: intermediateCAPath))
+
+         let rootCAPath = URL(fileURLWithPath: #file).deletingLastPathComponent()
+             .appendingPathComponent("Inputs", isDirectory: true).appendingPathComponent("AppleIncRoot.cer")
+         let rootCA = try Certificate(derEncoded: Data(contentsOf: rootCAPath))
+
+         let certChain = [certificate, intermediateCA, rootCA]
+
+         let policy = AppleDeveloperCertificatePolicy(expectedSubjectUserID: "677EZU7C9K")
+         XCTAssertTrue(try tsc_await { callback in policy.validate(certChain: certChain, callback: callback) })
+     }
+     */
 }

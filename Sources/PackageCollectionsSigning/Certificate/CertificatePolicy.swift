@@ -261,6 +261,48 @@ struct NoopCertificatePolicy: CertificatePolicy {
 
 // MARK: - Certificate policies
 
+struct DefaultCertificatePolicy: CertificatePolicy {
+    let trustedRoots: [Certificate]?
+    let expectedSubjectUserID: String?
+
+    let queue: DispatchQueue
+
+    init(trustedRootCertsDir: URL? = nil, expectedSubjectUserID: String? = nil, queue: DispatchQueue = DispatchQueue.global()) {
+        self.trustedRoots = trustedRootCertsDir.map { Self.loadCerts(at: $0) }
+        self.expectedSubjectUserID = expectedSubjectUserID
+        self.queue = queue
+    }
+
+    func validate(certChain: [Certificate], callback: @escaping (Result<Bool, Error>) -> Void) {
+        guard !certChain.isEmpty else {
+            return callback(.failure(CertificatePolicyError.emptyCertChain))
+        }
+
+        do {
+            // Check if subject user ID matches
+            if let expectedSubjectUserID = self.expectedSubjectUserID {
+                guard try certChain[0].subject().userID == expectedSubjectUserID else {
+                    return callback(.success(false))
+                }
+            }
+
+            // Must be a code signing certificate
+            guard try self.hasExtendedKeyUsage(.codeSigning, in: certChain[0]) else {
+                return callback(.success(false))
+            }
+            // Must support OCSP
+            guard try self.supportsOCSP(certificate: certChain[0]) else {
+                return callback(.success(false))
+            }
+
+            // Verify the cert chain - if it is trusted then cert chain is valid
+            self.verify(certChain: certChain, anchorCerts: self.trustedRoots, queue: self.queue, callback: callback)
+        } catch {
+            return callback(.failure(error))
+        }
+    }
+}
+
 struct AppleDeveloperCertificatePolicy: CertificatePolicy {
     private static let expectedCertChainLength = 3
     private static let appleDistributionIOSMarker = "1.2.840.113635.100.6.1.4"
@@ -272,7 +314,7 @@ struct AppleDeveloperCertificatePolicy: CertificatePolicy {
 
     let queue: DispatchQueue
 
-    init(trustedRootCertsDir: URL? = nil, expectedSubjectUserID: String? = nil, queue: DispatchQueue = DispatchQueue.global()) throws {
+    init(trustedRootCertsDir: URL? = nil, expectedSubjectUserID: String? = nil, queue: DispatchQueue = DispatchQueue.global()) {
         self.trustedRoots = trustedRootCertsDir.map { Self.loadCerts(at: $0) }
         self.expectedSubjectUserID = expectedSubjectUserID
         self.queue = queue
@@ -302,48 +344,6 @@ struct AppleDeveloperCertificatePolicy: CertificatePolicy {
             guard try self.hasExtension(oid: Self.appleIntermediateMarker, in: certChain[1]) else {
                 return callback(.success(false))
             }
-            // Must be a code signing certificate
-            guard try self.hasExtendedKeyUsage(.codeSigning, in: certChain[0]) else {
-                return callback(.success(false))
-            }
-            // Must support OCSP
-            guard try self.supportsOCSP(certificate: certChain[0]) else {
-                return callback(.success(false))
-            }
-
-            // Verify the cert chain - if it is trusted then cert chain is valid
-            self.verify(certChain: certChain, anchorCerts: self.trustedRoots, queue: self.queue, callback: callback)
-        } catch {
-            return callback(.failure(error))
-        }
-    }
-}
-
-struct BasicCertificatePolicy: CertificatePolicy {
-    let trustedRoots: [Certificate]?
-    let expectedSubjectUserID: String?
-
-    let queue: DispatchQueue
-
-    init(trustedRootCertsDir: URL? = nil, expectedSubjectUserID: String? = nil, queue: DispatchQueue = DispatchQueue.global()) throws {
-        self.trustedRoots = trustedRootCertsDir.map { Self.loadCerts(at: $0) }
-        self.expectedSubjectUserID = expectedSubjectUserID
-        self.queue = queue
-    }
-
-    func validate(certChain: [Certificate], callback: @escaping (Result<Bool, Error>) -> Void) {
-        guard !certChain.isEmpty else {
-            return callback(.failure(CertificatePolicyError.emptyCertChain))
-        }
-
-        do {
-            // Check if subject user ID matches
-            if let expectedSubjectUserID = self.expectedSubjectUserID {
-                guard try certChain[0].subject().userID == expectedSubjectUserID else {
-                    return callback(.success(false))
-                }
-            }
-
             // Must be a code signing certificate
             guard try self.hasExtendedKeyUsage(.codeSigning, in: certChain[0]) else {
                 return callback(.success(false))

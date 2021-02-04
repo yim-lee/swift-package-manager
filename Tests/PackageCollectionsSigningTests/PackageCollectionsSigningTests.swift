@@ -33,8 +33,10 @@ class PackageCollectionsSigningTests: XCTestCase {
 
             let privateKeyPath = directoryPath.appending(components: "Signing", "Test_rsa_key.pem")
 
-            // TODO: use TestCertificatePolicy to trust self-signed test certs
-            let signing = PackageCollectionSigning()
+            let rootCA = try Certificate(derEncoded: Data(try localFileSystem.readFileContents(rootCAPath).contents))
+            // Trust the self-signed root cert
+            let certPolicy = TestCertificatePolicy(anchorCerts: [rootCA])
+            let signing = PackageCollectionSigning(certPolicy: certPolicy)
 
             // Sign the collection
             let signedCollection = try tsc_await { callback in
@@ -79,8 +81,10 @@ class PackageCollectionsSigningTests: XCTestCase {
 
             let privateKeyPath = directoryPath.appending(components: "Signing", "Test_rsa_key.pem")
 
-            // TODO: use TestCertificatePolicy to trust self-signed test certs
-            let signing = PackageCollectionSigning()
+            let rootCA = try Certificate(derEncoded: Data(try localFileSystem.readFileContents(rootCAPath).contents))
+            // Trust the self-signed root cert
+            let certPolicy = TestCertificatePolicy(anchorCerts: [rootCA])
+            let signing = PackageCollectionSigning(certPolicy: certPolicy)
 
             // Sign collection1
             let signedCollection = try tsc_await { callback in
@@ -110,8 +114,10 @@ class PackageCollectionsSigningTests: XCTestCase {
 
             let privateKeyPath = directoryPath.appending(components: "Signing", "Test_ec_key.pem")
 
-            // TODO: use TestCertificatePolicy to trust self-signed test certs
-            let signing = PackageCollectionSigning()
+            let rootCA = try Certificate(derEncoded: Data(try localFileSystem.readFileContents(rootCAPath).contents))
+            // Trust the self-signed root cert
+            let certPolicy = TestCertificatePolicy(anchorCerts: [rootCA])
+            let signing = PackageCollectionSigning(certPolicy: certPolicy)
 
             // Sign the collection
             let signedCollection = try tsc_await { callback in
@@ -156,8 +162,10 @@ class PackageCollectionsSigningTests: XCTestCase {
 
             let privateKeyPath = directoryPath.appending(components: "Signing", "Test_ec_key.pem")
 
-            // TODO: use TestCertificatePolicy to trust self-signed test certs
-            let signing = PackageCollectionSigning()
+            let rootCA = try Certificate(derEncoded: Data(try localFileSystem.readFileContents(rootCAPath).contents))
+            // Trust the self-signed root cert
+            let certPolicy = TestCertificatePolicy(anchorCerts: [rootCA])
+            let signing = PackageCollectionSigning(certPolicy: certPolicy)
 
             // Sign collection1
             let signedCollection = try tsc_await { callback in
