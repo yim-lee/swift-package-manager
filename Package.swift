@@ -157,11 +157,23 @@ let package = Package(
             /** Package collections models */
             name: "PackageCollectionsModel",
             dependencies: []),
-        
+
         .target(
-            /** Package collections models */
+            /** Package collections signing C lib */
+            name: "PackageCollectionsSigningLibc",
+            dependencies: ["Crypto"],
+            cSettings: [
+                /*
+                 * This define is required on Windows, but because we need older
+                 * versions of SPM, we cannot conditionally define this on Windows
+                 * only. Unconditionally define it instead.
+                 */
+                .define("WIN32_LEAN_AND_MEAN"),
+            ]),
+        .target(
+            /** Package collections signing */
             name: "PackageCollectionsSigning",
-            dependencies: ["PackageCollectionsModel", "Crypto", "Basics"]),
+            dependencies: ["PackageCollectionsModel", "PackageCollectionsSigningLibc", "Crypto", "Basics"]),
 
         // MARK: Package Manager Functionality
 
