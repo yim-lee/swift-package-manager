@@ -48,7 +48,8 @@ struct JSONPackageCollectionProvider: PackageCollectionProvider {
          signatureValidator: PackageCollectionSignatureValidator? = nil,
          sourceCertPolicy: PackageCollectionSourceCertificatePolicy = PackageCollectionSourceCertificatePolicy(),
          fileSystem: FileSystem = localFileSystem,
-         diagnosticsEngine: DiagnosticsEngine) {
+         diagnosticsEngine: DiagnosticsEngine)
+    {
         self.configuration = configuration
         self.diagnosticsEngine = diagnosticsEngine
         self.httpClient = httpClient ?? Self.makeDefaultHTTPClient(diagnosticsEngine: diagnosticsEngine)
@@ -142,7 +143,8 @@ struct JSONPackageCollectionProvider: PackageCollectionProvider {
     private func decodeAndRunSignatureCheck(source: Model.CollectionSource,
                                             data: Data,
                                             certPolicyKeys: [CertificatePolicyKey],
-                                            callback: @escaping (Result<Model.Collection, Error>) -> Void) {
+                                            callback: @escaping (Result<Model.Collection, Error>) -> Void)
+    {
         do {
             // This fails if collection is not signed (i.e., no "signature")
             let signedCollection = try self.decoder.decode(JSONModel.SignedCollection.self, from: data)
@@ -345,7 +347,8 @@ struct JSONPackageCollectionProvider: PackageCollectionProvider {
                     trustedRootCertsDir: URL? = nil,
                     maximumPackageCount: Int? = nil,
                     maximumMajorVersionCount: Int? = nil,
-                    maximumMinorVersionCount: Int? = nil) {
+                    maximumMinorVersionCount: Int? = nil)
+        {
             // TODO: where should we read defaults from?
             self.maximumSizeInBytes = maximumSizeInBytes ?? 5_000_000 // 5MB
             self.trustedRootCertsDir = trustedRootCertsDir
@@ -387,15 +390,15 @@ public enum JSONPackageCollectionProviderError: Error, Equatable, CustomStringCo
 
 // MARK: - Extensions for mapping from JSON to PackageCollectionsModel
 
-extension Model.Product {
-    fileprivate init(from: JSONModel.Product, packageTargets: [Model.Target]) {
+private extension Model.Product {
+    init(from: JSONModel.Product, packageTargets: [Model.Target]) {
         let targets = packageTargets.filter { from.targets.map { $0.lowercased() }.contains($0.name.lowercased()) }
         self = .init(name: from.name, type: .init(from: from.type), targets: targets)
     }
 }
 
-extension PackageModel.ProductType {
-    fileprivate init(from: JSONModel.ProductType) {
+private extension PackageModel.ProductType {
+    init(from: JSONModel.ProductType) {
         switch from {
         case .library(let libraryType):
             self = .library(.init(from: libraryType))
@@ -403,14 +406,16 @@ extension PackageModel.ProductType {
             self = .executable
         case .plugin:
             self = .plugin
+        case .snippet:
+            self = .snippet
         case .test:
             self = .test
         }
     }
 }
 
-extension PackageModel.ProductType.LibraryType {
-    fileprivate init(from: JSONModel.ProductType.LibraryType) {
+private extension PackageModel.ProductType.LibraryType {
+    init(from: JSONModel.ProductType.LibraryType) {
         switch from {
         case .static:
             self = .static
@@ -422,8 +427,8 @@ extension PackageModel.ProductType.LibraryType {
     }
 }
 
-extension PackageModel.SupportedPlatform {
-    fileprivate init?(from: JSONModel.PlatformVersion) {
+private extension PackageModel.SupportedPlatform {
+    init?(from: JSONModel.PlatformVersion) {
         guard let platform = Platform(name: from.name) else {
             return nil
         }
@@ -432,12 +437,12 @@ extension PackageModel.SupportedPlatform {
     }
 }
 
-extension PackageModel.Platform {
-    fileprivate init?(from: JSONModel.Platform) {
+private extension PackageModel.Platform {
+    init?(from: JSONModel.Platform) {
         self.init(name: from.name)
     }
 
-    fileprivate init?(name: String) {
+    init?(name: String) {
         switch name.lowercased() {
         case let name where name.contains("macos"):
             self = PackageModel.Platform.macOS
@@ -467,38 +472,39 @@ extension PackageModel.Platform {
     }
 }
 
-extension Model.Compatibility {
-    fileprivate init?(from: JSONModel.Compatibility) {
+private extension Model.Compatibility {
+    init?(from: JSONModel.Compatibility) {
         guard let platform = PackageModel.Platform(from: from.platform),
-            let swiftVersion = SwiftLanguageVersion(string: from.swiftVersion) else {
+              let swiftVersion = SwiftLanguageVersion(string: from.swiftVersion)
+        else {
             return nil
         }
         self.init(platform: platform, swiftVersion: swiftVersion)
     }
 }
 
-extension Model.License {
-    fileprivate init(from: JSONModel.License) {
+private extension Model.License {
+    init(from: JSONModel.License) {
         self.init(type: Model.LicenseType(string: from.name), url: from.url)
     }
 }
 
-extension Model.SignatureData {
-    fileprivate init(from: JSONModel.Signature, isVerified: Bool) {
+private extension Model.SignatureData {
+    init(from: JSONModel.Signature, isVerified: Bool) {
         self.certificate = .init(from: from.certificate)
         self.isVerified = isVerified
     }
 }
 
-extension Model.SignatureData.Certificate {
-    fileprivate init(from: JSONModel.Signature.Certificate) {
+private extension Model.SignatureData.Certificate {
+    init(from: JSONModel.Signature.Certificate) {
         self.subject = .init(from: from.subject)
         self.issuer = .init(from: from.issuer)
     }
 }
 
-extension Model.SignatureData.Certificate.Name {
-    fileprivate init(from: JSONModel.Signature.Certificate.Name) {
+private extension Model.SignatureData.Certificate.Name {
+    init(from: JSONModel.Signature.Certificate.Name) {
         self.userID = from.userID
         self.commonName = from.commonName
         self.organizationalUnit = from.organizationalUnit

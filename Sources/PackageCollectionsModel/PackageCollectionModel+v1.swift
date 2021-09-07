@@ -10,12 +10,12 @@
 
 import Foundation
 
-extension PackageCollectionModel {
-    public enum V1 {}
+public extension PackageCollectionModel {
+    enum V1 {}
 }
 
-extension PackageCollectionModel.V1 {
-    public struct Collection: Equatable, Codable {
+public extension PackageCollectionModel.V1 {
+    struct Collection: Equatable, Codable {
         /// The name of the package collection, for display purposes only.
         public let name: String
 
@@ -75,8 +75,8 @@ extension PackageCollectionModel.V1 {
     }
 }
 
-extension PackageCollectionModel.V1.Collection {
-    public struct Package: Equatable, Codable {
+public extension PackageCollectionModel.V1.Collection {
+    struct Package: Equatable, Codable {
         /// The URL of the package. Currently only Git repository URLs are supported.
         public let url: Foundation.URL
 
@@ -114,8 +114,8 @@ extension PackageCollectionModel.V1.Collection {
     }
 }
 
-extension PackageCollectionModel.V1.Collection.Package {
-    public struct Version: Equatable, Codable {
+public extension PackageCollectionModel.V1.Collection.Package {
+    struct Version: Equatable, Codable {
         /// The semantic version string.
         public let version: String
 
@@ -190,8 +190,8 @@ extension PackageCollectionModel.V1.Collection.Package {
     }
 }
 
-extension PackageCollectionModel.V1 {
-    public struct Target: Equatable, Codable {
+public extension PackageCollectionModel.V1 {
+    struct Target: Equatable, Codable {
         /// The target name.
         public let name: String
 
@@ -205,7 +205,7 @@ extension PackageCollectionModel.V1 {
         }
     }
 
-    public struct Product: Equatable, Codable {
+    struct Product: Equatable, Codable {
         /// The product name.
         public let name: String
 
@@ -227,7 +227,7 @@ extension PackageCollectionModel.V1 {
         }
     }
 
-    public struct PlatformVersion: Equatable, Codable {
+    struct PlatformVersion: Equatable, Codable {
         /// The name of the platform (e.g., macOS, Linux, etc.).
         public let name: String
 
@@ -241,7 +241,7 @@ extension PackageCollectionModel.V1 {
         }
     }
 
-    public struct Platform: Equatable, Codable {
+    struct Platform: Equatable, Codable {
         /// The name of the platform (e.g., macOS, Linux, etc.).
         public let name: String
 
@@ -252,7 +252,7 @@ extension PackageCollectionModel.V1 {
     }
 
     /// Compatible platform and Swift version.
-    public struct Compatibility: Equatable, Codable {
+    struct Compatibility: Equatable, Codable {
         /// The platform (e.g., macOS, Linux, etc.)
         public let platform: Platform
 
@@ -266,7 +266,7 @@ extension PackageCollectionModel.V1 {
         }
     }
 
-    public struct License: Equatable, Codable {
+    struct License: Equatable, Codable {
         /// License name (e.g., Apache-2.0, MIT, etc.)
         public let name: String?
 
@@ -304,9 +304,9 @@ extension PackageCollectionModel.V1.Compatibility: Comparable {
 
 // MARK: -  Copy `PackageModel.ProductType` to minimize the module's dependencies
 
-extension PackageCollectionModel.V1 {
+public extension PackageCollectionModel.V1 {
     /// The type of product.
-    public enum ProductType: Equatable {
+    enum ProductType: Equatable {
         /// The type of library.
         public enum LibraryType: String, Codable {
             /// Static library.
@@ -328,6 +328,9 @@ extension PackageCollectionModel.V1 {
         /// An plugin product.
         case plugin
 
+        /// An executable code snippet.
+        case snippet
+
         /// A test product.
         case test
     }
@@ -335,7 +338,7 @@ extension PackageCollectionModel.V1 {
 
 extension PackageCollectionModel.V1.ProductType: Codable {
     private enum CodingKeys: String, CodingKey {
-        case library, executable, plugin, test
+        case library, executable, plugin, snippet, test
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -348,6 +351,8 @@ extension PackageCollectionModel.V1.ProductType: Codable {
             try container.encodeNil(forKey: .executable)
         case .plugin:
             try container.encodeNil(forKey: .plugin)
+        case .snippet:
+            try container.encodeNil(forKey: .snippet)
         case .test:
             try container.encodeNil(forKey: .test)
         }
@@ -363,22 +368,24 @@ extension PackageCollectionModel.V1.ProductType: Codable {
             var unkeyedValues = try values.nestedUnkeyedContainer(forKey: key)
             let a1 = try unkeyedValues.decode(PackageCollectionModel.V1.ProductType.LibraryType.self)
             self = .library(a1)
-        case .test:
-            self = .test
         case .executable:
             self = .executable
         case .plugin:
             self = .plugin
+        case .snippet:
+            self = .snippet
+        case .test:
+            self = .test
         }
     }
 }
 
 // MARK: - Signed package collection
 
-extension PackageCollectionModel.V1 {
+public extension PackageCollectionModel.V1 {
     /// A  signed packge collection. The only difference between this and `Collection`
     /// is the presence of `signature`.
-    public struct SignedCollection: Equatable {
+    struct SignedCollection: Equatable {
         /// The package collection
         public let collection: PackageCollectionModel.V1.Collection
 
@@ -393,7 +400,7 @@ extension PackageCollectionModel.V1 {
     }
 
     /// Package collection signature and associated metadata
-    public struct Signature: Equatable, Codable {
+    struct Signature: Equatable, Codable {
         /// The signature
         public let signature: String
 
@@ -436,7 +443,8 @@ extension PackageCollectionModel.V1 {
                 public init(userID: String?,
                             commonName: String?,
                             organizationalUnit: String?,
-                            organization: String?) {
+                            organization: String?)
+                {
                     self.userID = userID
                     self.commonName = commonName
                     self.organizationalUnit = organizationalUnit
