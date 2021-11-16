@@ -3352,7 +3352,6 @@ extension Workspace {
                 version: version,
                 fileSystem: self.fileSystem,
                 destinationPath: downloadPath,
-                expectedChecksum: nil, // we dont know at this point
                 checksumAlgorithm: self.checksumAlgorithm,
                 observabilityScope: observabilityScope,
                 callbackQueue: .sharedConcurrent,

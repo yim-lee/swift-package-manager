@@ -18,8 +18,6 @@ import PackageModel
 import TSCBasic
 import TSCUtility
 
-/// Package registry client.
-/// API specification: https://github.com/apple/swift-package-manager/blob/main/Documentation/Registry.md
 public enum RegistryError: Error {
     case registryNotConfigured(scope: PackageIdentity.Scope?)
     case invalidPackage(PackageIdentity)
@@ -32,9 +30,12 @@ public enum RegistryError: Error {
     case invalidSourceArchive
     case unsupportedHashAlgorithm(String)
     case failedToDetermineExpectedChecksum(Error)
+    case checksumChanged(latest: String, previous: String)
     case invalidChecksum(expected: String, actual: String)
 }
 
+/// Package registry client.
+/// API specification: https://github.com/apple/swift-package-manager/blob/main/Documentation/Registry.md
 public final class RegistryManager {
     private let apiVersion: APIVersion = .v1
 
@@ -43,18 +44,21 @@ public final class RegistryManager {
     private let archiverProvider: (FileSystem) -> Archiver
     private let httpClient: HTTPClient
     private let authorizationProvider: HTTPClientAuthorizationProvider?
+    let checksumStorage: ChecksumStorage
 
     public init(configuration: RegistryConfiguration,
                 identityResolver: IdentityResolver,
                 customArchiverProvider: ((FileSystem) -> Archiver)? = nil,
                 customHTTPClient: HTTPClient? = nil,
-                authorizationProvider: HTTPClientAuthorizationProvider? = nil)
+                authorizationProvider: HTTPClientAuthorizationProvider? = nil,
+                customChecksumStorage: ChecksumStorage? = nil)
     {
         self.configuration = configuration
         self.identityResolver = identityResolver
         self.archiverProvider = customArchiverProvider ?? { fileSystem in SourceArchiver(fileSystem: fileSystem) }
         self.httpClient = customHTTPClient ?? HTTPClient()
         self.authorizationProvider = authorizationProvider
+        self.checksumStorage = customChecksumStorage ?? FileChecksumStorage()
     }
 
     public func fetchVersions(
@@ -64,7 +68,7 @@ public final class RegistryManager {
         callbackQueue: DispatchQueue,
         completion: @escaping (Result<[Version], Error>) -> Void
     ) {
-        let completion = self.makeAsync(completion, on: callbackQueue)
+        let completion = makeAsync(completion, on: callbackQueue)
 
         guard case (let scope, let name)? = package.scopeAndName else {
             return completion(.failure(RegistryError.invalidPackage(package)))
@@ -121,7 +125,7 @@ public final class RegistryManager {
         callbackQueue: DispatchQueue,
         completion: @escaping (Result<Manifest, Error>) -> Void
     ) {
-        let completion = self.makeAsync(completion, on: callbackQueue)
+        let completion = makeAsync(completion, on: callbackQueue)
 
         guard case (let scope, let name)? = package.scopeAndName else {
             return completion(.failure(RegistryError.invalidPackage(package)))
@@ -208,7 +212,7 @@ public final class RegistryManager {
         callbackQueue: DispatchQueue,
         completion: @escaping (Result<String, Error>) -> Void
     ) {
-        let completion = self.makeAsync(completion, on: callbackQueue)
+        let completion = makeAsync(completion, on: callbackQueue)
 
         guard case (let scope, let name)? = package.scopeAndName else {
             return completion(.failure(RegistryError.invalidPackage(package)))
@@ -237,26 +241,47 @@ public final class RegistryManager {
         request.options.authorizationProvider = authorizationProvider
 
         self.httpClient.execute(request, observabilityScope: observabilityScope, progress: nil) { result in
-            completion(result.tryMap { response in
-                try self.checkResponseStatusAndHeaders(response, expectedStatusCode: 200, expectedContentType: .json)
+            switch result {
+            case .success(let response):
+                do {
+                    try self.checkResponseStatusAndHeaders(response, expectedStatusCode: 200, expectedContentType: .json)
 
-                guard let data = response.body,
-                      case .dictionary(let payload) = try? JSON(data: data),
-                      case .array(let resources) = payload["resources"]
-                else {
-                    throw RegistryError.invalidResponse
+                    guard let data = response.body,
+                          case .dictionary(let payload) = try? JSON(data: data),
+                          case .array(let resources) = payload["resources"]
+                    else {
+                        throw RegistryError.invalidResponse
+                    }
+
+                    guard let sourceArchive = resources.first(where: { (try? $0.get(String.self, forKey: "name")) == "source-archive" }) else {
+                        throw RegistryError.missingSourceArchive
+                    }
+
+                    guard let checksum = try? sourceArchive.get(String.self, forKey: "checksum") else {
+                        throw RegistryError.invalidSourceArchive
+                    }
+
+                    self.checksumStorage.put(package: package,
+                                             version: version,
+                                             checksum: checksum,
+                                             observabilityScope: observabilityScope,
+                                             callbackQueue: callbackQueue) { storageResult in
+                        switch storageResult {
+                        case .success:
+                            completion(.success(checksum))
+                        case .failure(let error):
+                            if case ChecksumStorageError.conflict(_, let existingChecksum) = error {
+                                return completion(.failure(RegistryError.checksumChanged(latest: checksum, previous: existingChecksum)))
+                            }
+                            completion(.failure(error))
+                        }
+                    }
+                } catch {
+                    completion(.failure(error))
                 }
-
-                guard let sourceArchive = resources.first(where: { (try? $0.get(String.self, forKey: "name")) == "source-archive" }) else {
-                    throw RegistryError.missingSourceArchive
-                }
-
-                guard let checksum = try? sourceArchive.get(String.self, forKey: "checksum") else {
-                    throw RegistryError.invalidSourceArchive
-                }
-
-                return checksum
-            })
+            case .failure(let error):
+                completion(.failure(error))
+            }
         }
     }
 
@@ -265,14 +290,13 @@ public final class RegistryManager {
         version: Version,
         fileSystem: FileSystem,
         destinationPath: AbsolutePath,
-        expectedChecksum: String?, // previously recorded checksum, if any
         checksumAlgorithm: HashAlgorithm, // the same algorithm used by `package compute-checksum` tool
         timeout: DispatchTimeInterval? = .none,
         observabilityScope: ObservabilityScope,
         callbackQueue: DispatchQueue,
         completion: @escaping (Result<Void, Error>) -> Void
     ) {
-        let completion = self.makeAsync(completion, on: callbackQueue)
+        let completion = makeAsync(completion, on: callbackQueue)
 
         guard case (let scope, let name)? = package.scopeAndName else {
             return completion(.failure(RegistryError.invalidPackage(package)))
@@ -284,16 +308,27 @@ public final class RegistryManager {
 
         // We either use a previously recorded checksum, or fetch it from the registry
         func withExpectedChecksum(body: @escaping (Result<String, Error>) -> Void) {
-            if let expectedChecksum = expectedChecksum {
-                return body(.success(expectedChecksum))
+            self.checksumStorage.get(package: package,
+                                     version: version,
+                                     observabilityScope: observabilityScope,
+                                     callbackQueue: callbackQueue) { result in
+                switch result {
+                case .success(let existingChecksum):
+                    body(.success(existingChecksum))
+                case .failure(let error):
+                    if error as? ChecksumStorageError != .notFound {
+                        observabilityScope.emit(error: "Failed to get checksum for \(package) \(version) from storage: \(error)")
+                    }
+
+                    self.fetchSourceArchiveChecksum(
+                        package: package,
+                        version: version,
+                        observabilityScope: observabilityScope,
+                        callbackQueue: callbackQueue,
+                        completion: body
+                    )
+                }
             }
-            self.fetchSourceArchiveChecksum(
-                package: package,
-                version: version,
-                observabilityScope: observabilityScope,
-                callbackQueue: callbackQueue,
-                completion: body
-            )
         }
 
         var components = URLComponents(url: registry.url, resolvingAgainstBaseURL: true)
@@ -369,7 +404,7 @@ public final class RegistryManager {
         callbackQueue: DispatchQueue,
         completion: @escaping (Result<Set<PackageIdentity>, Error>) -> Void
     ) {
-        let completion = self.makeAsync(completion, on: callbackQueue)
+        let completion = makeAsync(completion, on: callbackQueue)
 
         guard let registry = configuration.defaultRegistry else {
             return completion(.failure(RegistryError.registryNotConfigured(scope: nil)))
@@ -418,10 +453,6 @@ public final class RegistryManager {
                 return Set(packageIdentities)
             })
         }
-    }
-
-    private func makeAsync<T>(_ closure: @escaping (Result<T, Error>) -> Void, on queue: DispatchQueue) -> (Result<T, Error>) -> Void {
-        { result in queue.async { closure(result) } }
     }
 }
 

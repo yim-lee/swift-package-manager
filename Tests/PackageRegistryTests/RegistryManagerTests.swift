@@ -12,7 +12,7 @@ import Basics
 import Foundation
 import PackageLoading
 import PackageModel
-import PackageRegistry
+@testable import PackageRegistry
 import SPMTestSupport
 import TSCBasic
 import XCTest
@@ -71,13 +71,7 @@ final class RegistryManagerTests: XCTestCase {
         var configuration = RegistryConfiguration()
         configuration.defaultRegistry = Registry(url: URL(string: registryURL)!)
 
-        let registryManager = RegistryManager(
-            configuration: configuration,
-            identityResolver: DefaultIdentityResolver(),
-            customArchiverProvider: { _ in MockArchiver() },
-            customHTTPClient: httpClient
-        )
-
+        let registryManager = makeRegistryManager(configuration: configuration, httpClient: httpClient)
         let versions = try registryManager.fetchVersions(package: identity)
         XCTAssertEqual(["1.1.1", "1.0.0"], versions)
     }
@@ -132,13 +126,7 @@ final class RegistryManagerTests: XCTestCase {
         var configuration = RegistryConfiguration()
         configuration.defaultRegistry = Registry(url: URL(string: registryURL)!)
 
-        let registryManager = RegistryManager(
-            configuration: configuration,
-            identityResolver: DefaultIdentityResolver(),
-            customArchiverProvider: { _ in MockArchiver() },
-            customHTTPClient: httpClient
-        )
-
+        let registryManager = makeRegistryManager(configuration: configuration, httpClient: httpClient)
         let manifestLoader = ManifestLoader(toolchain: .default)
         let manifest = try registryManager.fetchManifest(
             package: identity,
@@ -164,86 +152,80 @@ final class RegistryManagerTests: XCTestCase {
 
     // FIXME: this fails with error "the package manifest at '/Package.swift' cannot be accessed (/Package.swift doesn't exist in file system)"
     /*
-    func testFetchManifestForToolsVersion() throws {
-        let registryURL = "https://packages.example.com"
-        let identity = PackageIdentity.plain("mona.LinkedList")
-        let (scope, name) = identity.scopeAndName!
-        let version = Version("1.1.1")
-        let toolsVersion = ToolsVersion.v5
-        let manifestURL = URL(string: "\(registryURL)/\(scope)/\(name)/\(version)/Package.swift?swift-version=\(toolsVersion)")!
+     func testFetchManifestForToolsVersion() throws {
+         let registryURL = "https://packages.example.com"
+         let identity = PackageIdentity.plain("mona.LinkedList")
+         let (scope, name) = identity.scopeAndName!
+         let version = Version("1.1.1")
+         let toolsVersion = ToolsVersion.v5
+         let manifestURL = URL(string: "\(registryURL)/\(scope)/\(name)/\(version)/Package.swift?swift-version=\(toolsVersion)")!
 
-        let handler: HTTPClient.Handler = { request, _, completion in
-            switch (request.method, request.url) {
-            case (.get, manifestURL):
-                XCTAssertEqual(request.headers.get("Accept").first, "application/vnd.swift.registry.v1+swift")
+         let handler: HTTPClient.Handler = { request, _, completion in
+             switch (request.method, request.url) {
+             case (.get, manifestURL):
+                 XCTAssertEqual(request.headers.get("Accept").first, "application/vnd.swift.registry.v1+swift")
 
-                let data = #"""
-                 // swift-tools-version:5.0
-                 import PackageDescription
+                 let data = #"""
+                  // swift-tools-version:5.0
+                  import PackageDescription
 
-                 let package = Package(
-                     name: "LinkedList",
-                     products: [
-                         .library(name: "LinkedList", targets: ["LinkedList"])
-                     ],
-                     targets: [
-                         .target(name: "LinkedList"),
-                         .testTarget(name: "LinkedListTests", dependencies: ["LinkedList"]),
-                     ],
-                     swiftLanguageVersions: [.v4, .v5]
-                 )
-                 """#.data(using: .utf8)!
+                  let package = Package(
+                      name: "LinkedList",
+                      products: [
+                          .library(name: "LinkedList", targets: ["LinkedList"])
+                      ],
+                      targets: [
+                          .target(name: "LinkedList"),
+                          .testTarget(name: "LinkedListTests", dependencies: ["LinkedList"]),
+                      ],
+                      swiftLanguageVersions: [.v4, .v5]
+                  )
+                  """#.data(using: .utf8)!
 
-                completion(.success(.init(
-                    statusCode: 200,
-                    headers: .init([
-                        .init(name: "Content-Length", value: "\(data.count)"),
-                        .init(name: "Content-Type", value: "text/x-swift"),
-                        .init(name: "Content-Version", value: "1")
-                    ]),
-                    body: data
-                )))
-            default:
-                XCTFail("method and url should match")
-            }
-        }
+                 completion(.success(.init(
+                     statusCode: 200,
+                     headers: .init([
+                         .init(name: "Content-Length", value: "\(data.count)"),
+                         .init(name: "Content-Type", value: "text/x-swift"),
+                         .init(name: "Content-Version", value: "1")
+                     ]),
+                     body: data
+                 )))
+             default:
+                 XCTFail("method and url should match")
+             }
+         }
 
-        var httpClient = HTTPClient(handler: handler)
-        httpClient.configuration.circuitBreakerStrategy = .none
-        httpClient.configuration.retryStrategy = .none
+         var httpClient = HTTPClient(handler: handler)
+         httpClient.configuration.circuitBreakerStrategy = .none
+         httpClient.configuration.retryStrategy = .none
 
-        var configuration = RegistryConfiguration()
-        configuration.defaultRegistry = Registry(url: URL(string: registryURL)!)
+         var configuration = RegistryConfiguration()
+         configuration.defaultRegistry = Registry(url: URL(string: registryURL)!)
 
-        let registryManager = RegistryManager(
-            configuration: configuration,
-            identityResolver: DefaultIdentityResolver(),
-            customArchiverProvider: { _ in MockArchiver() },
-            customHTTPClient: httpClient
-        )
+         let registryManager = makeRegistryManager(configuration: configuration, httpClient: httpClient)
+         let manifestLoader = ManifestLoader(toolchain: .default)
+         let manifest = try registryManager.fetchManifest(
+             package: identity,
+             version: version,
+             manifestLoader: manifestLoader,
+             toolsVersion: toolsVersion
+         )
 
-        let manifestLoader = ManifestLoader(toolchain: .default)
-        let manifest = try registryManager.fetchManifest(
-            package: identity,
-            version: version,
-            manifestLoader: manifestLoader,
-            toolsVersion: toolsVersion
-        )
+         XCTAssertEqual(manifest.displayName, "LinkedList")
 
-        XCTAssertEqual(manifest.displayName, "LinkedList")
+         XCTAssertEqual(manifest.products.count, 1)
+         XCTAssertEqual(manifest.products.first?.name, "LinkedList")
+         XCTAssertEqual(manifest.products.first?.type, .library(.automatic))
 
-        XCTAssertEqual(manifest.products.count, 1)
-        XCTAssertEqual(manifest.products.first?.name, "LinkedList")
-        XCTAssertEqual(manifest.products.first?.type, .library(.automatic))
+         XCTAssertEqual(manifest.targets.count, 2)
+         XCTAssertEqual(manifest.targets.first?.name, "LinkedList")
+         XCTAssertEqual(manifest.targets.first?.type, .regular)
+         XCTAssertEqual(manifest.targets.last?.name, "LinkedListTests")
+         XCTAssertEqual(manifest.targets.last?.type, .test)
 
-        XCTAssertEqual(manifest.targets.count, 2)
-        XCTAssertEqual(manifest.targets.first?.name, "LinkedList")
-        XCTAssertEqual(manifest.targets.first?.type, .regular)
-        XCTAssertEqual(manifest.targets.last?.name, "LinkedListTests")
-        XCTAssertEqual(manifest.targets.last?.type, .test)
-
-        XCTAssertEqual(manifest.swiftLanguageVersions, [.v4, .v5])
-    }*/
+         XCTAssertEqual(manifest.swiftLanguageVersions, [.v4, .v5])
+     }*/
 
     func testFetchSourceArchiveChecksum() throws {
         let registryURL = "https://packages.example.com"
@@ -295,18 +277,18 @@ final class RegistryManagerTests: XCTestCase {
         var configuration = RegistryConfiguration()
         configuration.defaultRegistry = Registry(url: URL(string: registryURL)!)
 
-        let registryManager = RegistryManager(
-            configuration: configuration,
-            identityResolver: DefaultIdentityResolver(),
-            customArchiverProvider: { _ in MockArchiver() },
-            customHTTPClient: httpClient
-        )
-
+        let registryManager = makeRegistryManager(configuration: configuration, httpClient: httpClient)
         let checksum = try registryManager.fetchSourceArchiveChecksum(package: identity, version: version)
         XCTAssertEqual("a2ac54cf25fbc1ad0028f03f0aa4b96833b83bb05a14e510892bb27dea4dc812", checksum)
+
+        // Checksum should have been saved to storage
+        let storageChecksum = try tsc_await { callback in registryManager.checksumStorage.get(package: identity, version: version,
+                                                                                              observabilityScope: ObservabilitySystem.NOOP, callbackQueue: .sharedConcurrent,
+                                                                                              callback: callback) }
+        XCTAssertEqual("a2ac54cf25fbc1ad0028f03f0aa4b96833b83bb05a14e510892bb27dea4dc812", storageChecksum)
     }
 
-    func testDownloadSourceArchiveWithExpectedChecksumProvided() throws {
+    func testDownloadSourceArchiveWithExpectedChecksumInStorage() throws {
         let registryURL = "https://packages.example.com"
         let identity = PackageIdentity.plain("mona.LinkedList")
         let (scope, name) = identity.scopeAndName!
@@ -346,22 +328,19 @@ final class RegistryManagerTests: XCTestCase {
         var configuration = RegistryConfiguration()
         configuration.defaultRegistry = Registry(url: URL(string: registryURL)!)
 
-        let registryManager = RegistryManager(
-            configuration: configuration,
-            identityResolver: DefaultIdentityResolver(),
-            customArchiverProvider: { _ in MockArchiver() },
-            customHTTPClient: httpClient
-        )
-
+        let registryManager = makeRegistryManager(configuration: configuration, httpClient: httpClient)
         let fileSystem = InMemoryFileSystem()
         let path = AbsolutePath("/LinkedList-1.1.1")
+
+        // Put checksum in storage so it gets used
+        try tsc_await { callback in registryManager.checksumStorage.put(package: identity, version: version, checksum: expectedChecksum,
+                                                                        observabilityScope: ObservabilitySystem.NOOP, callbackQueue: .sharedConcurrent, callback: callback) }
 
         try registryManager.downloadSourceArchive(
             package: identity,
             version: version,
             fileSystem: fileSystem,
             destinationPath: path,
-            expectedChecksum: expectedChecksum,
             checksumAlgorithm: checksumAlgorithm
         )
 
@@ -390,14 +369,14 @@ final class RegistryManagerTests: XCTestCase {
 
                 completion(.success(.init(statusCode: 200,
                                           headers: .init([
-                                            .init(name: "Content-Length", value: "\(data.count)"),
-                                            .init(name: "Content-Type", value: "application/zip"),
-                                            .init(name: "Content-Version", value: "1"),
-                                            .init(name: "Content-Disposition", value: #"attachment; filename="LinkedList-1.1.1.zip""#),
-                                            .init(name: "Digest", value: "sha-256=bc6c9a5d2f2226cfa1ef4fad8344b10e1cc2e82960f468f70d9ed696d26b3283"),
+                                              .init(name: "Content-Length", value: "\(data.count)"),
+                                              .init(name: "Content-Type", value: "application/zip"),
+                                              .init(name: "Content-Version", value: "1"),
+                                              .init(name: "Content-Disposition", value: #"attachment; filename="LinkedList-1.1.1.zip""#),
+                                              .init(name: "Digest", value: "sha-256=bc6c9a5d2f2226cfa1ef4fad8344b10e1cc2e82960f468f70d9ed696d26b3283"),
                                           ]),
                                           body: data)))
-                // `downloadSourceArchive` calls this API to fetch checksum
+            // `downloadSourceArchive` calls this API to fetch checksum
             case (.get, metadataURL):
                 XCTAssertEqual(request.headers.get("Accept").first, "application/vnd.swift.registry.v1+json")
 
@@ -439,22 +418,16 @@ final class RegistryManagerTests: XCTestCase {
         var configuration = RegistryConfiguration()
         configuration.defaultRegistry = Registry(url: URL(string: registryURL)!)
 
-        let registryManager = RegistryManager(
-            configuration: configuration,
-            identityResolver: DefaultIdentityResolver(),
-            customArchiverProvider: { _ in MockArchiver() },
-            customHTTPClient: httpClient
-        )
-
+        let registryManager = makeRegistryManager(configuration: configuration, httpClient: httpClient)
         let fileSystem = InMemoryFileSystem()
         let path = AbsolutePath("/LinkedList-1.1.1")
 
+        // Expected checksum is not found in storage so the metadata API will be called
         try registryManager.downloadSourceArchive(
             package: identity,
             version: version,
             fileSystem: fileSystem,
             destinationPath: path,
-            expectedChecksum: .none,
             checksumAlgorithm: checksumAlgorithm
         )
 
@@ -503,22 +476,16 @@ final class RegistryManagerTests: XCTestCase {
         var configuration = RegistryConfiguration()
         configuration.defaultRegistry = Registry(url: URL(string: registryURL)!)
 
-        let registryManager = RegistryManager(
-            configuration: configuration,
-            identityResolver: DefaultIdentityResolver(),
-            customArchiverProvider: { _ in MockArchiver() },
-            customHTTPClient: httpClient
-        )
-
+        let registryManager = makeRegistryManager(configuration: configuration, httpClient: httpClient)
         let identities = try registryManager.lookupIdentities(url: packageURL)
         XCTAssertEqual([PackageIdentity.plain("mona.LinkedList")], identities)
     }
 }
 
-// MARK - Sugar
+// MARK: - Sugar
 
-extension RegistryManager {
-    public func fetchVersions(package: PackageIdentity) throws -> [Version] {
+private extension RegistryManager {
+    func fetchVersions(package: PackageIdentity) throws -> [Version] {
         return try tsc_await {
             self.fetchVersions(
                 package: package,
@@ -529,7 +496,7 @@ extension RegistryManager {
         }
     }
 
-    public func fetchManifest(
+    func fetchManifest(
         package: PackageIdentity,
         version: Version,
         manifestLoader: ManifestLoaderProtocol,
@@ -548,7 +515,7 @@ extension RegistryManager {
         }
     }
 
-    public func fetchSourceArchiveChecksum(package: PackageIdentity, version: Version) throws -> String {
+    func fetchSourceArchiveChecksum(package: PackageIdentity, version: Version) throws -> String {
         return try tsc_await {
             self.fetchSourceArchiveChecksum(
                 package: package,
@@ -560,21 +527,19 @@ extension RegistryManager {
         }
     }
 
-    public func downloadSourceArchive(
+    func downloadSourceArchive(
         package: PackageIdentity,
         version: Version,
         fileSystem: FileSystem,
         destinationPath: AbsolutePath,
-        expectedChecksum: String?,
         checksumAlgorithm: HashAlgorithm
-    ) throws -> Void {
+    ) throws {
         return try tsc_await {
             self.downloadSourceArchive(
                 package: package,
                 version: version,
                 fileSystem: fileSystem,
                 destinationPath: destinationPath,
-                expectedChecksum: expectedChecksum,
                 checksumAlgorithm: checksumAlgorithm,
                 observabilityScope: ObservabilitySystem.NOOP,
                 callbackQueue: .sharedConcurrent,
@@ -583,7 +548,7 @@ extension RegistryManager {
         }
     }
 
-    public func lookupIdentities(url: Foundation.URL) throws -> Set<PackageIdentity> {
+    func lookupIdentities(url: Foundation.URL) throws -> Set<PackageIdentity> {
         return try tsc_await {
             self.lookupIdentities(
                 url: url,
@@ -593,4 +558,14 @@ extension RegistryManager {
             )
         }
     }
+}
+
+private func makeRegistryManager(configuration: RegistryConfiguration, httpClient: HTTPClient) -> RegistryManager {
+    RegistryManager(
+        configuration: configuration,
+        identityResolver: DefaultIdentityResolver(),
+        customArchiverProvider: { _ in MockArchiver() },
+        customHTTPClient: httpClient,
+        customChecksumStorage: FileChecksumStorage(customFileSystem: InMemoryFileSystem())
+    )
 }

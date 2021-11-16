@@ -7,10 +7,13 @@
 # See http://swift.org/CONTRIBUTORS.txt for Swift project authors
 
 add_library(PackageRegistry
+  Checksum/ChecksumStorage.swift
+  Checksum/FileChecksumStorage.swift
   Registry.swift
   RegistryConfiguration.swift
   RegistryManager.swift
-  SourceArchiver.swift)
+  SourceArchiver.swift
+  Utility.swift)
 target_link_libraries(PackageRegistry PUBLIC
   Basics
   PackageLoading
