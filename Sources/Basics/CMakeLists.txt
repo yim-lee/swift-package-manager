@@ -15,6 +15,7 @@ add_library(Basics
   EnvironmentVariables.swift
   Errors.swift
   FileSystem+Extensions.swift
+  GitShellHelper.swift
   HTPClient+URLSession.swift
   HTTPClient.swift
   JSON+Extensions.swift
