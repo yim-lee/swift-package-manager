@@ -24,6 +24,13 @@ extension PackageCollections {
     }
 }
 
-public enum AuthTokenType: Hashable {
+public enum AuthTokenType: Hashable, CustomStringConvertible {
     case github(_ host: String)
+    
+    public var description: String {
+        switch self {
+        case .github(let host):
+            return "github(\(host))"
+        }
+    }
 }

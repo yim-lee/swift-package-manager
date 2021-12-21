@@ -16,7 +16,7 @@ import TSCBasic
 import TSCUtility
 
 /// `PackageBasicMetadata` provider
-protocol PackageMetadataProvider: Closable {
+public protocol PackageMetadataProvider: Closable {
     /// The name of the provider
     var name: String { get }
 
@@ -35,25 +35,25 @@ protocol PackageMetadataProvider: Closable {
     func getAuthTokenType(for location: String) -> AuthTokenType?
 }
 
-extension Model {
+public extension PackageCollectionsModel {
     struct PackageBasicMetadata: Equatable, Codable {
-        let summary: String?
-        let keywords: [String]?
-        let versions: [PackageBasicVersionMetadata]
-        let watchersCount: Int?
-        let readmeURL: Foundation.URL?
-        let license: PackageCollectionsModel.License?
-        let authors: [PackageCollectionsModel.Package.Author]?
-        let languages: Set<String>?
-        let processedAt: Date
+        public let summary: String?
+        public let keywords: [String]?
+        public let versions: [PackageBasicVersionMetadata]
+        public let watchersCount: Int?
+        public let readmeURL: Foundation.URL?
+        public let license: PackageCollectionsModel.License?
+        public let authors: [PackageCollectionsModel.Package.Author]?
+        public let languages: Set<String>?
+        public let processedAt: Date
     }
 
     struct PackageBasicVersionMetadata: Equatable, Codable {
-        let version: TSCUtility.Version
-        let title: String?
-        let summary: String?
-        let createdAt: Date
-        let publishedAt: Date?
+        public let version: TSCUtility.Version
+        public let title: String?
+        public let summary: String?
+        public let createdAt: Date
+        public let publishedAt: Date?
     }
 }
 

@@ -18,7 +18,7 @@ import struct Foundation.URL
 import PackageModel
 import TSCBasic
 
-struct GitHubPackageMetadataProvider: PackageMetadataProvider {
+public struct GitHubPackageMetadataProvider: PackageMetadataProvider {
     private static let apiHostPrefix = "api."
 
     public var name: String = "GitHub"
@@ -30,7 +30,7 @@ struct GitHubPackageMetadataProvider: PackageMetadataProvider {
 
     private let cache: SQLiteBackedCache<CacheValue>?
 
-    init(configuration: Configuration = .init(), observabilityScope: ObservabilityScope, httpClient: HTTPClient? = nil) {
+    public init(configuration: Configuration = .init(), observabilityScope: ObservabilityScope, httpClient: HTTPClient? = nil) {
         self.configuration = configuration
         self.observabilityScope = observabilityScope
         self.httpClient = httpClient ?? Self.makeDefaultHTTPClient()
@@ -48,11 +48,11 @@ struct GitHubPackageMetadataProvider: PackageMetadataProvider {
         }
     }
 
-    func close() throws {
+    public func close() throws {
         try self.cache?.close()
     }
 
-    func get(identity: PackageIdentity, location: String, callback: @escaping (Result<Model.PackageBasicMetadata, Error>) -> Void) {
+    public func get(identity: PackageIdentity, location: String, callback: @escaping (Result<PackageCollectionsModel.PackageBasicMetadata, Error>) -> Void) {
         guard let baseURL = Self.apiURL(location) else {
             return callback(.failure(Errors.invalidGitURL(location)))
         }
@@ -175,7 +175,7 @@ struct GitHubPackageMetadataProvider: PackageMetadataProvider {
         }
     }
 
-    func getAuthTokenType(for location: String) -> AuthTokenType? {
+    public func getAuthTokenType(for location: String) -> AuthTokenType? {
         guard let baseURL = Self.apiURL(location) else {
             return nil
         }

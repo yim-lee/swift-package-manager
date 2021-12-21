@@ -1,7 +1,7 @@
 /*
  This source file is part of the Swift.org open source project
 
- Copyright 2020-2022 Apple Inc. and the Swift project authors
+ Copyright 2020-2021 Apple Inc. and the Swift project authors
  Licensed under Apache License v2.0 with Runtime Library Exception
 
  See http://swift.org/LICENSE.txt for license information
@@ -12,6 +12,7 @@ import ArgumentParser
 import Basics
 import Foundation
 import PackageCollections
+import PackageCollectionsModel
 import PackageModel
 import TSCBasic
 import TSCUtility
@@ -392,11 +393,343 @@ public struct SwiftPackageCollectionsTool: ParsableCommand {
             """)
         private var authToken: [String] = []
 
-        @Flag(name: .long, help: "Format output using friendly indentation and line-breaks.")
+        @Flag(name: .long, help: "Format output package collection using friendly indentation and line-breaks.")
         private var prettyPrinted: Bool = false
+        
+        typealias Model = PackageCollectionModel.V1
 
         func run(_ swiftTool: SwiftTool) throws {
-            print("generate")
+            // Parse auth tokens
+            let authTokens = self.authToken.reduce(into: [AuthTokenType: String]()) { authTokens, authToken in
+                let parts = authToken.components(separatedBy: ":")
+                guard parts.count == 3, let type = AuthTokenType.from(type: parts[0], host: parts[1]) else {
+                    swiftTool.observabilityScope.emit(warning: "Ignoring invalid auth token '\(authToken)'")
+                    return
+                }
+                authTokens[type] = parts[2]
+            }
+            if !self.authToken.isEmpty {
+                swiftTool.observabilityScope.emit(info: "Using auth tokens: \(authTokens.keys)")
+            }
+            
+            swiftTool.observabilityScope.emit(info: "Using input file located at \(self.inputPath)")
+
+            // Get the list of packages to process
+            let jsonDecoder = JSONDecoder.makeWithDefaults()
+            let input = try jsonDecoder.decode(PackageCollectionGeneratorInput.self, from: Data(contentsOf: URL(fileURLWithPath: self.inputPath)))
+            swiftTool.observabilityScope.emit(debug: "\(input)")
+            
+            let git = GitHelper(processSet: swiftTool.processSet)
+            let metadataProvider = GitHubPackageMetadataProvider(
+                configuration: .init(authTokens: { authTokens }),
+                observabilityScope: swiftTool.observabilityScope
+            )
+            
+            // Generate metadata for each package
+            let packages: [Model.Collection.Package] = input.packages.compactMap { package in
+                do {
+                    let packageMetadata = try self.generateMetadata(
+                        for: package,
+                        git: git,
+                        metadataProvider: metadataProvider,
+                        jsonDecoder: jsonDecoder,
+                        swiftTool: swiftTool
+                    )
+                    swiftTool.observabilityScope.emit(debug: "\(packageMetadata)")
+
+                    guard !packageMetadata.versions.isEmpty else {
+                        swiftTool.observabilityScope.emit(error: "Skipping package \(package.url) because it does not have any valid versions.")
+                        return nil
+                    }
+
+                    return packageMetadata
+                } catch {
+                    swiftTool.observabilityScope.emit(error: "Failed to generate metadata for package \(package.url): \(error)")
+                    return nil
+                }
+            }
+
+            guard !packages.isEmpty else {
+                swiftTool.observabilityScope.emit(error: "Failed to create package collection because it does not have any valid packages.")
+                return
+            }
+
+            /*
+            // Construct the package collection
+            let packageCollection = Model.Collection(
+                name: input.name,
+                overview: input.overview,
+                keywords: input.keywords,
+                packages: packages,
+                formatVersion: .v1_0,
+                revision: self.revision,
+                generatedAt: Date(),
+                generatedBy: input.author
+            )
+
+            // Make sure the output directory exists
+            let outputAbsolutePath: AbsolutePath
+            do {
+                outputAbsolutePath = try AbsolutePath(validating: self.outputPath)
+            } catch {
+                outputAbsolutePath = AbsolutePath(self.outputPath, relativeTo: AbsolutePath(FileManager.default.currentDirectoryPath))
+            }
+            let outputDirectory = outputAbsolutePath.parentDirectory
+            try localFileSystem.createDirectory(outputDirectory, recursive: true)
+
+            // Write the package collection
+            let jsonEncoder = JSONEncoder.makeWithDefaults(sortKeys: true, prettyPrint: self.prettyPrinted, escapeSlashes: false)
+            let jsonData = try jsonEncoder.encode(packageCollection)
+            try jsonData.write(to: URL(fileURLWithPath: outputAbsolutePath.pathString))
+             */
+        }
+        
+        private func generateMetadata(for package: PackageCollectionGeneratorInput.Package,
+                                      git: GitHelper,
+                                      metadataProvider: PackageMetadataProvider,
+                                      jsonDecoder: JSONDecoder,
+                                      swiftTool: SwiftTool) throws -> Model.Collection.Package {
+            swiftTool.observabilityScope.emit(info: "Processing package \(package.url)")
+
+            // Try to locate the directory where the repository might have been cloned to previously
+            if let workingDirectoryPath = self.workingDirectoryPath {
+                let workingDirectoryAbsolutePath = AbsolutePath(absoluteOrRelativePath: workingDirectoryPath)
+
+                // Extract directory name from repository URL
+                if let repositoryName = package.url.repositoryName {
+                    swiftTool.observabilityScope.emit(debug: "Extracted repository name from URL: \(repositoryName)")
+
+                    let gitDirectoryPath = workingDirectoryAbsolutePath.appending(component: repositoryName)
+                    if localFileSystem.exists(gitDirectoryPath) {
+                        // If directory exists, assume it has been cloned previously
+                        swiftTool.observabilityScope.emit(info: "\(gitDirectoryPath) exists")
+                        try git.fetch(gitDirectory: gitDirectoryPath)
+                    } else {
+                        // Else clone it
+                        swiftTool.observabilityScope.emit(info: "\(gitDirectoryPath) does not exist")
+                        try git.clone(package.url, to: gitDirectoryPath)
+                    }
+
+                    return try self.generateMetadata(
+                        for: package,
+                        gitDirectory: gitDirectoryPath,
+                        git: git,
+                        metadataProvider: metadataProvider,
+                        jsonDecoder: jsonDecoder,
+                        swiftTool: swiftTool
+                    )
+                }
+            }
+
+            // Fallback to tmp directory if we cannot use the working directory for some reason or it's unspecified
+            return try withTemporaryDirectory(removeTreeOnDeinit: false) { tmpDir in
+                // Clone the package repository
+                try git.clone(package.url, to: tmpDir)
+
+                return try self.generateMetadata(
+                    for: package,
+                    gitDirectory: tmpDir,
+                    git: git,
+                    metadataProvider: metadataProvider,
+                    jsonDecoder: jsonDecoder,
+                    swiftTool: swiftTool
+                )
+            }
+        }
+        
+        private func generateMetadata(for package: PackageCollectionGeneratorInput.Package,
+                                      gitDirectory: AbsolutePath,
+                                      git: GitHelper,
+                                      metadataProvider: PackageMetadataProvider,
+                                      jsonDecoder: JSONDecoder,
+                                      swiftTool: SwiftTool) throws -> Model.Collection.Package {
+            var additionalMetadata: PackageCollectionsModel.PackageBasicMetadata?
+            do {
+                additionalMetadata = try tsc_await { callback in
+                    metadataProvider.get(identity: .init(url: package.url), location: package.url.absoluteString, callback: callback)
+                }
+            } catch {
+                swiftTool.observabilityScope.emit(error: "Failed to fetch additional metadata: \(error)")
+            }
+            if let additionalMetadata = additionalMetadata {
+                swiftTool.observabilityScope.emit(debug: "Retrieved additional metadata: \(additionalMetadata)")
+            }
+
+            // Select versions if none specified
+            var versions = try package.versions ?? self.defaultVersions(for: gitDirectory, git: git, observabilityScope: swiftTool.observabilityScope)
+
+            // Remove excluded versions
+            if let excludedVersions = package.excludedVersions {
+                swiftTool.observabilityScope.emit(info: "Excluding: \(excludedVersions)")
+                let excludedVersionsSet = Set(excludedVersions)
+                versions = versions.filter { !excludedVersionsSet.contains($0) }
+            }
+
+            // Load the manifest for each version and extract metadata
+            let packageVersions: [Model.Collection.Package.Version] = versions.compactMap { version in
+                do {
+                    let metadata = try self.generateMetadata(
+                        for: version,
+                        excludedProducts: package.excludedProducts.map { Set($0) } ?? [],
+                        excludedTargets: package.excludedTargets.map { Set($0) } ?? [],
+                        gitDirectory: gitDirectory,
+                        git: git,
+                        jsonDecoder: jsonDecoder,
+                        swiftTool: swiftTool
+                    )
+
+                    guard metadata.manifests.values.first(where: { !$0.products.isEmpty }) != nil else {
+                        swiftTool.observabilityScope.emit(error: "Skipping version \(version) because it does not have any products.")
+                        return nil
+                    }
+                    guard metadata.manifests.values.first(where: { !$0.targets.isEmpty }) != nil else {
+                        swiftTool.observabilityScope.emit(error: "Skipping version \(version) because it does not have any targets.")
+                        return nil
+                    }
+
+                    return metadata
+                } catch {
+                    swiftTool.observabilityScope.emit(error: "Failed to load package manifest for \(package.url) version \(version): \(error)")
+                    return nil
+                }
+            }
+            
+            return Model.Collection.Package(
+                url: package.url,
+                summary: package.summary ?? additionalMetadata?.summary,
+                keywords: package.keywords ?? additionalMetadata?.keywords,
+                versions: packageVersions,
+                readmeURL: package.readmeURL ?? additionalMetadata?.readmeURL,
+                license: additionalMetadata?.license.map { .init(name: $0.type.description, url: $0.url) }
+            )
+        }
+
+        private func generateMetadata(for version: String,
+                                      excludedProducts: Set<String>,
+                                      excludedTargets: Set<String>,
+                                      gitDirectory: AbsolutePath,
+                                      git: GitHelper,
+                                      jsonDecoder: JSONDecoder,
+                                      swiftTool: SwiftTool) throws -> Model.Collection.Package.Version {
+            // Check out the git tag
+            swiftTool.observabilityScope.emit(info: "Checking out version \(version)")
+            try git.checkout(version, at: gitDirectory)
+
+            let tag = try git.readTag(version, for: gitDirectory)
+            
+            let defaultManifest = try self.defaultManifest(
+                excludedProducts: excludedProducts,
+                excludedTargets: excludedTargets,
+                packagePath: gitDirectory,
+                jsonDecoder: jsonDecoder,
+                swiftTool: swiftTool
+            )
+            // TODO: Use `describe` to obtain all manifest-related data, including version-specific manifests
+            let manifests = [defaultManifest.toolsVersion: defaultManifest]
+
+            return Model.Collection.Package.Version(
+                version: version,
+                summary: tag?.message,
+                manifests: manifests,
+                defaultToolsVersion: defaultManifest.toolsVersion,
+                verifiedCompatibility: nil,
+                license: nil,
+                createdAt: tag?.createdAt
+            )
+        }
+
+        private func defaultManifest(excludedProducts: Set<String>,
+                                     excludedTargets: Set<String>,
+                                     packagePath: AbsolutePath,
+                                     jsonDecoder: JSONDecoder,
+                                     swiftTool: SwiftTool) throws -> Model.Collection.Package.Version.Manifest {
+            let workspace = try swiftTool.getActiveWorkspace()
+            let package = try tsc_await {
+                workspace.loadRootPackage(
+                    at: packagePath,
+                    observabilityScope: swiftTool.observabilityScope,
+                    completion: $0
+                )
+            }
+            let describedPackage = DescribedPackage(from: package)
+
+            let products: [Model.Product] = describedPackage.products
+                .filter { !excludedProducts.contains($0.name) }
+                .map { product in
+                    Model.Product(
+                        name: product.name,
+                        type: Model.ProductType(from: product.type),
+                        targets: product.targets
+                    )
+                }
+                .sorted { $0.name < $1.name }
+
+            // Include only targets that are in at least one product.
+            // Another approach is to use `target.product_memberships` but the way it is implemented produces a more concise list.
+            let publicTargets = Set(products.map(\.targets).reduce(into: []) { result, targets in
+                result.append(contentsOf: targets.filter { !excludedTargets.contains($0) })
+            })
+
+            let targets: [Model.Target] = describedPackage.targets
+                .filter { publicTargets.contains($0.name) }
+                .map { target in
+                    Model.Target(
+                        name: target.name,
+                        moduleName: target.c99name
+                    )
+                }
+                .sorted { $0.name < $1.name }
+
+            let minimumPlatformVersions = describedPackage.platforms.map { Model.PlatformVersion(name: $0.name, version: $0.version) }
+
+            return Model.Collection.Package.Version.Manifest(
+                toolsVersion: describedPackage.toolsVersion,
+                packageName: describedPackage.name,
+                targets: targets,
+                products: products,
+                minimumPlatformVersions: minimumPlatformVersions
+            )
+        }
+
+        private func defaultVersions(for gitDirectory: AbsolutePath,
+                                     git: GitHelper,
+                                     observabilityScope: ObservabilityScope) throws -> [String] {
+            // List all the tags
+            let tags = try git.listTags(for: gitDirectory)
+            observabilityScope.emit(info: "Tags: \(tags)")
+
+            // Sort tags in descending order (non-semver tags are excluded)
+            // By default, we want:
+            //  - At most 3 minor versions per major version
+            //  - Maximum of 2 majors
+            //  - Maximum of 6 versions total
+            var allVersions: [(tag: String, version: Version)] = tags.compactMap { tag in
+                // Remove common "v" prefix which is supported by SwiftPM
+                Version(tag.hasPrefix("v") ? String(tag.dropFirst(1)) : tag).map { (tag: tag, version: $0) }
+            }
+            allVersions.sort { $0.version > $1.version }
+
+            var versions = [String]()
+            var currentMajor: Int?
+            var majorCount = 0
+            var minorCount = 0
+            for tagVersion in allVersions {
+                if tagVersion.version.major != currentMajor {
+                    currentMajor = tagVersion.version.major
+                    majorCount += 1
+                    minorCount = 0
+                }
+
+                guard majorCount <= 2 else { break }
+                guard minorCount < 3 else { continue }
+
+                versions.append(tagVersion.tag)
+                minorCount += 1
+            }
+
+            observabilityScope.emit(info: "Default versions: \(versions)")
+
+            return versions
         }
     }
     
@@ -458,6 +791,8 @@ public struct SwiftPackageCollectionsTool: ParsableCommand {
     }
 }
 
+// MARK: - Helpers
+
 private func indent(levels: Int = 1) -> String {
     return String(repeating: "    ", count: levels)
 }
@@ -502,5 +837,139 @@ private extension ParsableCommand {
             return URL(fileURLWithPath: String(urlString.dropFirst(filePrefix.count)))
         }
         return url
+    }
+}
+
+private extension AbsolutePath {
+    init(absoluteOrRelativePath: String) {
+        do {
+            try self.init(validating: absoluteOrRelativePath)
+        } catch {
+            self.init(absoluteOrRelativePath, relativeTo: AbsolutePath(FileManager.default.currentDirectoryPath))
+        }
+    }
+}
+
+private extension Foundation.URL {
+    var repositoryName: String? {
+        let url = self.absoluteString
+        do {
+            let regex = try NSRegularExpression(pattern: #"([^/@]+)[:/]([^:/]+)/([^/.]+)(\.git)?$"#, options: .caseInsensitive)
+            guard let match = regex.firstMatch(in: url, options: [], range: NSRange(location: 0, length: url.count)) else {
+                return nil
+            }
+            guard let nameRange = Range(match.range(at: 3), in: url) else {
+                return nil
+            }
+            return String(url[nameRange])
+        } catch {
+            return nil
+        }
+    }
+}
+
+private struct GitHelper {
+    private let git: GitShellHelper
+    
+    init(processSet: ProcessSet) {
+        self.git = GitShellHelper(processSet: processSet)
+    }
+    
+    func clone(_ url: Foundation.URL, to path: AbsolutePath) throws {
+        _ = try self.callGit("clone", url.absoluteString, path.pathString)
+    }
+
+    func fetch(gitDirectory: AbsolutePath) throws {
+        _ = try self.callGit("-C", gitDirectory.pathString, "fetch")
+    }
+
+    func checkout(_ reference: String, at gitDirectory: AbsolutePath) throws {
+        _ = try self.callGit("-C", gitDirectory.pathString, "checkout", reference)
+    }
+
+    func listTags(for gitDirectory: AbsolutePath) throws -> [String] {
+        let output = try self.callGit("-C", gitDirectory.pathString, "tag")
+        let tags = output.components(separatedBy: .whitespacesAndNewlines).filter { !$0.isEmpty }
+        return tags
+    }
+
+    func readTag(_ tag: String, for gitDirectory: AbsolutePath) throws -> Tag? {
+        // If a tag is annotated (i.e., has a message), this command will return "tag", otherwise it will return "commit".
+        let tagType = try self.callGit("-C", gitDirectory.pathString, "cat-file", "-t", tag)
+        guard tagType == "tag" else {
+            return nil
+        }
+        
+        // The following commands only make sense for annotated tag. Otherwise, `contents` would be
+        // the message of the commit that the tag points to, which isn't always appropriate, and
+        // `taggerdate` would be empty
+        let message = try self.callGit("-C", gitDirectory.pathString, "tag", "-l", "--format=%(contents:subject)", tag)
+        // This shows the date when the tag was created. This would be empty if the tag was created on GitHub as part of a release.
+        let createdAt = try self.callGit("-C", gitDirectory.pathString, "tag", "-l", "%(taggerdate:iso8601-strict)", tag)
+        return Tag(message: message, createdAt: createdAt)
+    }
+    
+    private func callGit(_ args: String...) throws -> String {
+        try self.git.run(args)
+    }
+    
+    struct Tag {
+        let message: String
+        let createdAt: Date?
+
+        private static let dateFormatter: DateFormatter = {
+            let dateFormatter = DateFormatter()
+            dateFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ssZZZZZ"
+            return dateFormatter
+        }()
+
+        init(message: String, createdAt: String) {
+            self.message = message
+            self.createdAt = Self.dateFormatter.date(from: createdAt)
+        }
+    }
+}
+
+
+// MARK: - Extensions to package collection models
+
+private extension AuthTokenType {
+    static func from(type: String, host: String) -> AuthTokenType? {
+        switch type {
+        case "github":
+            return .github(host)
+        default:
+            return nil
+        }
+    }
+}
+
+private extension PackageCollectionModel.V1.ProductType {
+    init(from: PackageModel.ProductType) {
+        switch from {
+        case .library(let libraryType):
+            self = .library(.init(from: libraryType))
+        case .executable:
+            self = .executable
+        case .plugin:
+            self = .plugin
+        case .snippet:
+            self = .snippet
+        case .test:
+            self = .test
+        }
+    }
+}
+
+private extension PackageCollectionModel.V1.ProductType.LibraryType {
+    init(from: PackageModel.ProductType.LibraryType) {
+        switch from {
+        case .static:
+            self = .static
+        case .dynamic:
+            self = .dynamic
+        case .automatic:
+            self = .automatic
+        }
     }
 }

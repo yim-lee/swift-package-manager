@@ -7,6 +7,7 @@
 # See http://swift.org/CONTRIBUTORS.txt for Swift project authors
 
 add_library(PackageCollectionsModel
+  PackageCollectionGeneratorModel.swift
   PackageCollectionModel.swift
   PackageCollectionModel+v1.swift)
 target_link_libraries(PackageCollectionsModel PUBLIC
