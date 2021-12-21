@@ -1,7 +1,7 @@
 /*
  This source file is part of the Swift.org open source project
 
- Copyright 2020-2021 Apple Inc. and the Swift project authors
+ Copyright 2020-2022 Apple Inc. and the Swift project authors
  Licensed under Apache License v2.0 with Runtime Library Exception
 
  See http://swift.org/LICENSE.txt for license information
@@ -60,17 +60,21 @@ public struct SwiftPackageCollectionsTool: ParsableCommand {
         subcommands: [
             Add.self,
             Describe.self,
+            Diff.self,
+            Generate.self,
             List.self,
             Refresh.self,
             Remove.self,
             Search.self,
+            Sign.self,
+            Validate.self
         ],
         helpNames: [.short, .long, .customLong("help", withSingleDash: true)]
     )
 
     public init() {}
 
-    // MARK: Collections
+    // MARK: - Collections
 
     struct List: SwiftCommand {
         static let configuration = CommandConfiguration(abstract: "List configured collections")
@@ -179,7 +183,7 @@ public struct SwiftPackageCollectionsTool: ParsableCommand {
         }
     }
 
-    // MARK: Search
+    // MARK: - Search
 
     enum SearchMethod: String, EnumerableFlag {
         case keywords
@@ -231,7 +235,7 @@ public struct SwiftPackageCollectionsTool: ParsableCommand {
         }
     }
 
-    // MARK: Packages
+    // MARK: - Describe
 
     struct Describe: SwiftCommand {
         static var configuration = CommandConfiguration(abstract: "Get metadata for a collection or a package included in an imported collection")
@@ -350,6 +354,106 @@ public struct SwiftPackageCollectionsTool: ParsableCommand {
                     }
                 }
             }
+        }
+    }
+    
+    // MARK: - Commands for authoring package collection
+    
+    struct Generate: SwiftCommand {
+        static var configuration = CommandConfiguration(abstract: "Generate a package collection")
+
+        @OptionGroup(_hiddenFromHelp: true)
+        var swiftOptions: SwiftToolOptions
+        
+        @Argument(help: "The path to the JSON document containing the list of packages to be processed")
+        private var inputPath: String
+
+        @Argument(help: "The path to write the generated package collection to")
+        private var outputPath: String
+
+        @Option(help:
+            """
+            The path to the working directory where package repositories may have been cloned previously. \
+            A package repository that already exists in the directory will be updated rather than cloned again.\n\n\
+            Be warned that the tool does not distinguish these directories by their corresponding git repository URL--\
+            different repositories with the same name will end up in the same directory.\n\n\
+            Temporary directories will be used instead if this argument is not specified.
+            """
+        )
+        private var workingDirectoryPath: String?
+
+        @Option(help: "The revision number of the generated package collection")
+        private var revision: Int?
+
+        @Option(parsing: .upToNextOption, help:
+            """
+            Auth tokens each in the format of type:host:token for retrieving additional package metadata via source
+            hosting platform APIs. Currently only GitHub APIs are supported. An example token would be github:github.com:<TOKEN>.
+            """)
+        private var authToken: [String] = []
+
+        @Flag(name: .long, help: "Format output using friendly indentation and line-breaks.")
+        private var prettyPrinted: Bool = false
+
+        func run(_ swiftTool: SwiftTool) throws {
+            print("generate")
+        }
+    }
+    
+    struct Sign: SwiftCommand {
+        static var configuration = CommandConfiguration(abstract: "Sign a package collection")
+
+        @OptionGroup(_hiddenFromHelp: true)
+        var swiftOptions: SwiftToolOptions
+        
+        @Argument(help: "The path to the package collection file to be signed")
+        var inputPath: String
+
+        @Argument(help: "The path to write the signed package collection to")
+        var outputPath: String
+
+        @Argument(help: "The path to certificate's private key (PEM encoded)")
+        var privateKeyPath: String
+
+        @Argument(help: "Paths to all certificates (DER encoded) in the chain. The certificate used for signing must be first and the root certificate last.")
+        var certChainPaths: [String]
+
+        func run(_ swiftTool: SwiftTool) throws {
+            print("sign")
+        }
+    }
+    
+    struct Validate: SwiftCommand {
+        static var configuration = CommandConfiguration(abstract: "Validate a package collection")
+
+        @OptionGroup(_hiddenFromHelp: true)
+        var swiftOptions: SwiftToolOptions
+        
+        @Argument(help: "The path to the JSON document containing the package collection to be validated")
+        private var inputPath: String
+
+        @Flag(name: .long, help: "Warnings will fail validation in addition to errors")
+        private var warningsAsErrors: Bool = false
+
+        func run(_ swiftTool: SwiftTool) throws {
+            print("validate")
+        }
+    }
+    
+    struct Diff: SwiftCommand {
+        static var configuration = CommandConfiguration(abstract: "Compare two package collections to determine if their contents are the same")
+
+        @OptionGroup(_hiddenFromHelp: true)
+        var swiftOptions: SwiftToolOptions
+        
+        @Argument(help: "The path to the JSON document containing package collection #1")
+        private var collectionOnePath: String
+
+        @Argument(help: "The path to the JSON document containing package collection #2")
+        private var collectionTwoPath: String
+
+        func run(_ swiftTool: SwiftTool) throws {
+            print("diff")
         }
     }
 }
