@@ -816,13 +816,7 @@ public struct SwiftPackageCollectionsTool: ParsableCommand {
             swiftTool.observabilityScope.emit(info: "Using input file located at \(self.inputPath)")
 
             let jsonDecoder = JSONDecoder.makeWithDefaults()
-            let collection: Model.Collection
-            do {
-                collection = try jsonDecoder.decode(Model.Collection.self, from: Data(contentsOf: URL(fileURLWithPath: self.inputPath)))
-            } catch {
-                print("Failed to parse package collection: \(error)")
-                throw error
-            }
+            let collection = try Model.Collection(filePath: self.inputPath, using: jsonDecoder)
 
             let validator = Model.Validator()
             let validationMessages = validator.validate(collection: collection) ?? []
@@ -860,9 +854,34 @@ public struct SwiftPackageCollectionsTool: ParsableCommand {
 
         @Argument(help: "The path to the JSON document containing package collection #2")
         private var collectionTwoPath: String
+        
+        typealias Model = PackageCollectionModel.V1
 
         func run(_ swiftTool: SwiftTool) throws {
-            print("diff")
+            swiftTool.observabilityScope.emit(info: "Comparing collections located at \(self.collectionOnePath) and \(self.collectionTwoPath)")
+
+            let jsonDecoder = JSONDecoder.makeWithDefaults()
+
+            let collectionOne = try Model.Collection(filePath: self.collectionOnePath, using: jsonDecoder)
+            let collectionTwo = try Model.Collection(filePath: self.collectionTwoPath, using: jsonDecoder)
+
+            if self.collectionsAreEqual(collectionOne, collectionTwo) {
+                return print("The package collections are the same")
+            } else {
+                return print("The package collections are different")
+            }
+        }
+
+        private func collectionsAreEqual(_ lhs: Model.Collection, _ rhs: Model.Collection) -> Bool {
+            guard lhs.name == rhs.name else { return false }
+            guard lhs.overview == rhs.overview else { return false }
+            guard lhs.keywords == rhs.keywords else { return false }
+            guard lhs.packages == rhs.packages else { return false }
+            guard lhs.formatVersion == rhs.formatVersion else { return false }
+            guard lhs.revision == rhs.revision else { return false }
+            // Don't compare generatedAt
+            guard lhs.generatedBy == rhs.generatedBy else { return false }
+            return true
         }
     }
 }
@@ -1050,6 +1069,17 @@ private extension PackageCollectionModel.V1.ProductType.LibraryType {
             self = .dynamic
         case .automatic:
             self = .automatic
+        }
+    }
+}
+
+private extension PackageCollectionModel.V1.Collection {
+    init(filePath: String, using decoder: JSONDecoder) throws {
+        do {
+            self = try decoder.decode(Self.self, from: Data(contentsOf: URL(fileURLWithPath: filePath)))
+        } catch {
+            print("Failed to parse package collection: \(error)")
+            throw error
         }
     }
 }

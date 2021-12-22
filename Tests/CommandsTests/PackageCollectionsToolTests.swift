@@ -421,6 +421,49 @@ final class PackageCollectionsToolTests: XCTestCase {
             XCTAssert(result.stdout.contains("includes too many major versions"), "got stdout:\n" + result.stdout)
         }
     }
+    
+    // MARK: - Diff
+    
+    func testDiffSameCollections() throws {
+        fixture(name: "Collections", createGitRepo: false) { fixtureDir in
+            let inputPath = fixtureDir.appending(components: "Generator", "diff.json")
+            let result = try self.execute([
+                "diff",
+                inputPath.pathString,
+                inputPath.pathString
+            ])
+            XCTAssertEqual(result.exitStatus, .terminated(code: 0))
+            XCTAssert(result.stdout.contains("package collections are the same"), "got stdout:\n" + result.stdout)
+        }
+    }
+
+    func testDiffCollectionsWithDifferentGeneratedAt() throws {
+        fixture(name: "Collections", createGitRepo: false) { fixtureDir in
+            let inputPathOne = fixtureDir.appending(components: "Generator", "diff.json")
+            let inputPathTwo = fixtureDir.appending(components: "Generator", "diff_generated_at.json")
+            let result = try self.execute([
+                "diff",
+                inputPathOne.pathString,
+                inputPathTwo.pathString
+            ])
+            XCTAssertEqual(result.exitStatus, .terminated(code: 0))
+            XCTAssert(result.stdout.contains("package collections are the same"), "got stdout:\n" + result.stdout)
+        }
+    }
+
+    func testDiffCollectionsWithDifferentPackages() throws {
+        fixture(name: "Collections", createGitRepo: false) { fixtureDir in
+            let inputPathOne = fixtureDir.appending(components: "Generator", "diff.json")
+            let inputPathTwo = fixtureDir.appending(components: "Generator", "diff_packages.json")
+            let result = try self.execute([
+                "diff",
+                inputPathOne.pathString,
+                inputPathTwo.pathString
+            ])
+            XCTAssertEqual(result.exitStatus, .terminated(code: 0))
+            XCTAssert(result.stdout.contains("package collections are different"), "got stdout:\n" + result.stdout)
+        }
+    }
 }
 
 private struct MockPackageCollectionSigner: PackageCollectionSigner {
