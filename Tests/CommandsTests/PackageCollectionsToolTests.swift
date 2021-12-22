@@ -10,18 +10,23 @@
 
 import Basics
 @testable import Commands
+import struct Foundation.Data
+import struct Foundation.URL
 import PackageCollectionsModel
+import PackageCollectionsSigning
 import SPMTestSupport
 import TSCBasic
 import TSCUtility
 import XCTest
 
+private typealias GeneratorModel = PackageCollectionModel.V1
+
 final class PackageCollectionsToolTests: XCTestCase {
-    typealias Model = PackageCollectionModel.V1
+    // MARK: - Generate
 
     func testGenerate() throws {
         fixture(name: "Collections") { fixtureDir in
-            try withTemporaryDirectory(removeTreeOnDeinit: false) { tmpDir in
+            try withTemporaryDirectory(removeTreeOnDeinit: true) { tmpDir in
                 let archiver = ZipArchiver()
                 // Prepare test package repositories
                 try tsc_await { callback in archiver.extract(from: fixtureDir.appending(components: "Generator", "TestRepoOne.zip"), to: tmpDir, completion: callback) }
@@ -55,16 +60,16 @@ final class PackageCollectionsToolTests: XCTestCase {
                 try localFileSystem.writeFileContents(inputFilePath, bytes: ByteString(inputData))
 
                 let expectedPackages = [
-                    Model.Collection.Package(
+                    GeneratorModel.Collection.Package(
                         url: URL(string: "https://package-collection-tests.com/repos/TestRepoOne.git")!,
                         summary: "Package Foo",
                         keywords: nil,
                         versions: [
-                            Model.Collection.Package.Version(
+                            GeneratorModel.Collection.Package.Version(
                                 version: "0.1.0",
                                 summary: nil,
                                 manifests: [
-                                    "5.2": Model.Collection.Package.Version.Manifest(
+                                    "5.2": GeneratorModel.Collection.Package.Version.Manifest(
                                         toolsVersion: "5.2",
                                         packageName: "TestPackageOne",
                                         targets: [.init(name: "Foo", moduleName: "Foo")],
@@ -81,16 +86,16 @@ final class PackageCollectionsToolTests: XCTestCase {
                         readmeURL: nil,
                         license: nil
                     ),
-                    Model.Collection.Package(
+                    GeneratorModel.Collection.Package(
                         url: URL(string: "https://package-collection-tests.com/repos/TestRepoTwo.git")!,
                         summary: "Package Foo & Bar",
                         keywords: nil,
                         versions: [
-                            Model.Collection.Package.Version(
+                            GeneratorModel.Collection.Package.Version(
                                 version: "0.2.0",
                                 summary: nil,
                                 manifests: [
-                                    "5.2": Model.Collection.Package.Version.Manifest(
+                                    "5.2": GeneratorModel.Collection.Package.Version.Manifest(
                                         toolsVersion: "5.2",
                                         packageName: "TestPackageTwo",
                                         targets: [
@@ -109,11 +114,11 @@ final class PackageCollectionsToolTests: XCTestCase {
                                 license: nil,
                                 createdAt: nil
                             ),
-                            Model.Collection.Package.Version(
+                            GeneratorModel.Collection.Package.Version(
                                 version: "0.1.0",
                                 summary: nil,
                                 manifests: [
-                                    "5.2": Model.Collection.Package.Version.Manifest(
+                                    "5.2": GeneratorModel.Collection.Package.Version.Manifest(
                                         toolsVersion: "5.2",
                                         packageName: "TestPackageTwo",
                                         targets: [.init(name: "Bar", moduleName: "Bar")],
@@ -130,16 +135,16 @@ final class PackageCollectionsToolTests: XCTestCase {
                         readmeURL: nil,
                         license: nil
                     ),
-                    Model.Collection.Package(
+                    GeneratorModel.Collection.Package(
                         url: URL(string: "https://package-collection-tests.com/repos/TestRepoThree.git")!,
                         summary: "Package Baz",
                         keywords: nil,
                         versions: [
-                            Model.Collection.Package.Version(
+                            GeneratorModel.Collection.Package.Version(
                                 version: "1.0.0",
                                 summary: nil,
                                 manifests: [
-                                    "5.2": Model.Collection.Package.Version.Manifest(
+                                    "5.2": GeneratorModel.Collection.Package.Version.Manifest(
                                         toolsVersion: "5.2",
                                         packageName: "TestPackageThree",
                                         targets: [.init(name: "Baz", moduleName: "Baz")],
@@ -180,7 +185,7 @@ final class PackageCollectionsToolTests: XCTestCase {
 
                     // Assert the generated package collection
                     let collectionData = try localFileSystem.readFileContents(outputFilePath).contents
-                    let packageCollection = try jsonDecoder.decode(Model.Collection.self, from: Data(collectionData))
+                    let packageCollection = try jsonDecoder.decode(GeneratorModel.Collection.self, from: Data(collectionData))
                     XCTAssertEqual(input.name, packageCollection.name)
                     XCTAssertEqual(input.overview, packageCollection.overview)
                     XCTAssertEqual(input.keywords, packageCollection.keywords)
@@ -196,7 +201,7 @@ final class PackageCollectionsToolTests: XCTestCase {
 
     func testGenerateWithExcludedVersions() throws {
         fixture(name: "Collections") { fixtureDir in
-            try withTemporaryDirectory(removeTreeOnDeinit: false) { tmpDir in
+            try withTemporaryDirectory(removeTreeOnDeinit: true) { tmpDir in
                 let archiver = ZipArchiver()
                 // Prepare test package repositories
                 try tsc_await { callback in archiver.extract(from: fixtureDir.appending(components: "Generator", "TestRepoOne.zip"), to: tmpDir, completion: callback) }
@@ -239,16 +244,16 @@ final class PackageCollectionsToolTests: XCTestCase {
                 try cmd.run()
 
                 let expectedPackages = [
-                    Model.Collection.Package(
+                    GeneratorModel.Collection.Package(
                         url: URL(string: "https://package-collection-tests.com/repos/TestRepoOne.git")!,
                         summary: "Package Foo",
                         keywords: nil,
                         versions: [
-                            Model.Collection.Package.Version(
+                            GeneratorModel.Collection.Package.Version(
                                 version: "0.1.0",
                                 summary: nil,
                                 manifests: [
-                                    "5.2": Model.Collection.Package.Version.Manifest(
+                                    "5.2": GeneratorModel.Collection.Package.Version.Manifest(
                                         toolsVersion: "5.2",
                                         packageName: "TestPackageOne",
                                         targets: [.init(name: "Foo", moduleName: "Foo")],
@@ -265,16 +270,16 @@ final class PackageCollectionsToolTests: XCTestCase {
                         readmeURL: nil,
                         license: nil
                     ),
-                    Model.Collection.Package(
+                    GeneratorModel.Collection.Package(
                         url: URL(string: "https://package-collection-tests.com/repos/TestRepoTwo.git")!,
                         summary: "Package Foo & Bar",
                         keywords: nil,
                         versions: [
-                            Model.Collection.Package.Version(
+                            GeneratorModel.Collection.Package.Version(
                                 version: "0.2.0",
                                 summary: nil,
                                 manifests: [
-                                    "5.2": Model.Collection.Package.Version.Manifest(
+                                    "5.2": GeneratorModel.Collection.Package.Version.Manifest(
                                         toolsVersion: "5.2",
                                         packageName: "TestPackageTwo",
                                         targets: [
@@ -303,12 +308,73 @@ final class PackageCollectionsToolTests: XCTestCase {
 
                 // Assert the generated package collection
                 let collectionData = try localFileSystem.readFileContents(outputFilePath).contents
-                let packageCollection = try jsonDecoder.decode(Model.Collection.self, from: Data(collectionData))
+                let packageCollection = try jsonDecoder.decode(GeneratorModel.Collection.self, from: Data(collectionData))
                 XCTAssertEqual(input.name, packageCollection.name)
                 XCTAssertEqual(input.overview, packageCollection.overview)
                 XCTAssertEqual(input.keywords, packageCollection.keywords)
                 XCTAssertEqual(expectedPackages, packageCollection.packages)
             }
         }
+    }
+    
+    // MARK: - Sign
+    
+    func testSign() throws {
+        fixture(name: "Collections") { fixtureDir in
+            try withTemporaryDirectory(removeTreeOnDeinit: true) { tmpDir in
+                let inputPath = fixtureDir.appending(components: "Generator", "test_collection.json")
+                let outputPath = tmpDir.appending(component: "test_collection_signed.json")
+                // These are not actually used since we are using MockPackageCollectionSigner
+                let privateKeyPath = fixtureDir.appending(components: "Signing", "Test_ec_key.pem")
+                let certPath = fixtureDir.appending(components: "Signing", "Test_ec.cer")
+
+                let cmd = try SwiftPackageCollectionsTool.Sign.parse([
+                    inputPath.pathString,
+                    outputPath.pathString,
+                    privateKeyPath.pathString,
+                    certPath.pathString,
+                ])
+
+                let swiftTool = try SwiftTool(options: cmd.swiftOptions)
+                // We don't have real certs so we have to use a mock signer
+                let signer = MockPackageCollectionSigner()
+                try cmd.run(swiftTool, customSigner: signer)
+
+                let jsonDecoder = JSONDecoder.makeWithDefaults()
+
+                // Assert the generated package collection
+                let bytes = try localFileSystem.readFileContents(outputPath).contents
+                let signedCollection = try jsonDecoder.decode(GeneratorModel.SignedCollection.self, from: Data(bytes))
+                XCTAssertEqual("test signature", signedCollection.signature.signature)
+            }
+        }
+    }
+}
+
+private struct MockPackageCollectionSigner: PackageCollectionSigner {
+    func sign(collection: GeneratorModel.Collection,
+              certChainPaths: [Foundation.URL],
+              privateKeyPEM: Data,
+              certPolicyKey: CertificatePolicyKey,
+              callback: @escaping (Result<GeneratorModel.SignedCollection, Error>) -> Void)
+    {
+        let signature = GeneratorModel.Signature(
+            signature: "test signature",
+            certificate: GeneratorModel.Signature.Certificate(
+                subject: GeneratorModel.Signature.Certificate.Name(
+                    userID: "test user id",
+                    commonName: "test subject",
+                    organizationalUnit: "test unit",
+                    organization: "test org"
+                ),
+                issuer: GeneratorModel.Signature.Certificate.Name(
+                    userID: nil,
+                    commonName: "test issuer",
+                    organizationalUnit: "test unit",
+                    organization: "test org"
+                )
+            )
+        )
+        callback(.success(GeneratorModel.SignedCollection(collection: collection, signature: signature)))
     }
 }

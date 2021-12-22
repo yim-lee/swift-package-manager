@@ -13,6 +13,7 @@ import Basics
 import Foundation
 import PackageCollections
 import PackageCollectionsModel
+import PackageCollectionsSigning
 import PackageModel
 import TSCBasic
 import TSCUtility
@@ -745,9 +746,55 @@ public struct SwiftPackageCollectionsTool: ParsableCommand {
 
         @Argument(help: "Paths to all certificates (DER encoded) in the chain. The certificate used for signing must be first and the root certificate last.")
         var certChainPaths: [String]
+        
+        typealias Model = PackageCollectionModel.V1
 
         func run(_ swiftTool: SwiftTool) throws {
-            print("sign")
+            try self.run(swiftTool, customSigner: .none)
+        }
+        
+        func run(_ swiftTool: SwiftTool, customSigner: PackageCollectionSigner?) throws {
+            guard !self.certChainPaths.isEmpty else {
+                swiftTool.observabilityScope.emit(error: "Certificate chain cannot be empty")
+                throw PackageCollectionSigningError.emptyCertChain
+            }
+
+            swiftTool.observabilityScope.emit(info: "Signing package collection located at \(self.inputPath)")
+
+            let jsonDecoder = JSONDecoder.makeWithDefaults()
+            let collection = try jsonDecoder.decode(Model.Collection.self, from: Data(contentsOf: URL(fileURLWithPath: self.inputPath)))
+
+            let privateKeyURL = Foundation.URL(fileURLWithPath: self.privateKeyPath)
+            let certChainURLs = self.certChainPaths.map { AbsolutePath(absoluteOrRelativePath: $0).asURL }
+
+            try withTemporaryDirectory(removeTreeOnDeinit: true) { tmpDir in
+                // The last item in the array is the root certificate and we want to trust it, so here we
+                // create a temp directory, copy the root certificate to it, and make it the trustedRootCertsDir.
+                let rootCertPath = AbsolutePath(certChainURLs.last!.path) // !-safe since certChain cannot be empty at this point
+                let rootCertFilename = rootCertPath.components.last!
+                try localFileSystem.copy(from: rootCertPath, to: tmpDir.appending(component: rootCertFilename))
+
+                // Sign the collection
+                let signer = customSigner ?? PackageCollectionSigning(
+                    trustedRootCertsDir: tmpDir.asURL,
+                    observabilityScope: swiftTool.observabilityScope,
+                    callbackQueue: .sharedConcurrent
+                )
+                let signedCollection = try tsc_await { callback in
+                    signer.sign(collection: collection, certChainPaths: certChainURLs, certPrivateKeyPath: privateKeyURL, certPolicyKey: .default, callback: callback)
+                }
+
+                // Make sure the output directory exists
+                let outputAbsolutePath = AbsolutePath(absoluteOrRelativePath: self.outputPath)
+                let outputDirectory = outputAbsolutePath.parentDirectory
+                try localFileSystem.createDirectory(outputDirectory, recursive: true)
+
+                // Write the signed collection
+                let jsonEncoder = JSONEncoder.makeWithDefaults(sortKeys: true, prettyPrint: false, escapeSlashes: false)
+                let jsonData = try jsonEncoder.encode(signedCollection)
+                try jsonData.write(to: URL(fileURLWithPath: outputAbsolutePath.pathString))
+                swiftTool.observabilityScope.emit(info: "Signed package collection saved to \(outputAbsolutePath)")
+            }
         }
     }
     

@@ -330,6 +330,7 @@ let package = Package(
                 "Basics",
                 "Build",
                 "PackageCollections",
+                "PackageCollectionsSigning",
                 "PackageFingerprint",
                 "PackageGraph",
                 "SourceControl",
