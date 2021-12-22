@@ -1183,14 +1183,13 @@ extension ObservabilityMetadata {
 
 extension SwiftToolOptions {
     var logLevel: Diagnostic.Severity {
-        return .info
-//        if self.verbose {
-//            return .info
-//        } else if self.veryVerbose {
-//            return .debug
-//        } else {
-//            return .warning
-//        }
+        if self.verbose {
+            return .info
+        } else if self.veryVerbose {
+            return .debug
+        } else {
+            return .warning
+        }
     }
 }
 

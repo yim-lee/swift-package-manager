@@ -424,6 +424,7 @@ public struct SwiftPackageCollectionsTool: ParsableCommand {
                 configuration: .init(authTokens: { authTokens }),
                 observabilityScope: swiftTool.observabilityScope
             )
+            defer { try? metadataProvider.close() }
             
             // Generate metadata for each package
             let packages: [Model.Collection.Package] = input.packages.compactMap { package in
@@ -438,7 +439,7 @@ public struct SwiftPackageCollectionsTool: ParsableCommand {
                     swiftTool.observabilityScope.emit(debug: "\(packageMetadata)")
 
                     guard !packageMetadata.versions.isEmpty else {
-                        swiftTool.observabilityScope.emit(error: "Skipping package \(package.url) because it does not have any valid versions.")
+                        swiftTool.observabilityScope.emit(warning: "Skipping package \(package.url) because it does not have any valid versions.")
                         return nil
                     }
 
@@ -454,7 +455,6 @@ public struct SwiftPackageCollectionsTool: ParsableCommand {
                 return
             }
 
-            /*
             // Construct the package collection
             let packageCollection = Model.Collection(
                 name: input.name,
@@ -468,12 +468,7 @@ public struct SwiftPackageCollectionsTool: ParsableCommand {
             )
 
             // Make sure the output directory exists
-            let outputAbsolutePath: AbsolutePath
-            do {
-                outputAbsolutePath = try AbsolutePath(validating: self.outputPath)
-            } catch {
-                outputAbsolutePath = AbsolutePath(self.outputPath, relativeTo: AbsolutePath(FileManager.default.currentDirectoryPath))
-            }
+            let outputAbsolutePath = AbsolutePath(absoluteOrRelativePath: self.outputPath)
             let outputDirectory = outputAbsolutePath.parentDirectory
             try localFileSystem.createDirectory(outputDirectory, recursive: true)
 
@@ -481,7 +476,7 @@ public struct SwiftPackageCollectionsTool: ParsableCommand {
             let jsonEncoder = JSONEncoder.makeWithDefaults(sortKeys: true, prettyPrint: self.prettyPrinted, escapeSlashes: false)
             let jsonData = try jsonEncoder.encode(packageCollection)
             try jsonData.write(to: URL(fileURLWithPath: outputAbsolutePath.pathString))
-             */
+            swiftTool.observabilityScope.emit(info: "Package collection saved to \(outputAbsolutePath)")
         }
         
         private func generateMetadata(for package: PackageCollectionGeneratorInput.Package,
@@ -522,7 +517,7 @@ public struct SwiftPackageCollectionsTool: ParsableCommand {
             }
 
             // Fallback to tmp directory if we cannot use the working directory for some reason or it's unspecified
-            return try withTemporaryDirectory(removeTreeOnDeinit: false) { tmpDir in
+            return try withTemporaryDirectory(removeTreeOnDeinit: true) { tmpDir in
                 // Clone the package repository
                 try git.clone(package.url, to: tmpDir)
 
@@ -549,7 +544,7 @@ public struct SwiftPackageCollectionsTool: ParsableCommand {
                     metadataProvider.get(identity: .init(url: package.url), location: package.url.absoluteString, callback: callback)
                 }
             } catch {
-                swiftTool.observabilityScope.emit(error: "Failed to fetch additional metadata: \(error)")
+                swiftTool.observabilityScope.emit(warning: "Failed to fetch additional metadata: \(error)")
             }
             if let additionalMetadata = additionalMetadata {
                 swiftTool.observabilityScope.emit(debug: "Retrieved additional metadata: \(additionalMetadata)")
@@ -579,11 +574,11 @@ public struct SwiftPackageCollectionsTool: ParsableCommand {
                     )
 
                     guard metadata.manifests.values.first(where: { !$0.products.isEmpty }) != nil else {
-                        swiftTool.observabilityScope.emit(error: "Skipping version \(version) because it does not have any products.")
+                        swiftTool.observabilityScope.emit(warning: "Skipping version \(version) because it does not have any products.")
                         return nil
                     }
                     guard metadata.manifests.values.first(where: { !$0.targets.isEmpty }) != nil else {
-                        swiftTool.observabilityScope.emit(error: "Skipping version \(version) because it does not have any targets.")
+                        swiftTool.observabilityScope.emit(warning: "Skipping version \(version) because it does not have any targets.")
                         return nil
                     }
 
@@ -647,7 +642,7 @@ public struct SwiftPackageCollectionsTool: ParsableCommand {
             let package = try tsc_await {
                 workspace.loadRootPackage(
                     at: packagePath,
-                    observabilityScope: swiftTool.observabilityScope,
+                    observabilityScope: swiftTool.observabilityScope.makeChildScope(description: "package describe"),
                     completion: $0
                 )
             }
@@ -845,7 +840,11 @@ private extension AbsolutePath {
         do {
             try self.init(validating: absoluteOrRelativePath)
         } catch {
-            self.init(absoluteOrRelativePath, relativeTo: AbsolutePath(FileManager.default.currentDirectoryPath))
+            if let cwd = localFileSystem.currentWorkingDirectory {
+                self.init(absoluteOrRelativePath, relativeTo: cwd)
+            } else {
+                self.init(absoluteOrRelativePath, relativeTo: AbsolutePath(FileManager.default.currentDirectoryPath))
+            }
         }
     }
 }

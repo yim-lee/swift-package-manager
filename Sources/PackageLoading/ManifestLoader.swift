@@ -547,6 +547,7 @@ public final class ManifestLoader: ManifestLoaderProtocol {
                 configuration: configuration
             )
         }
+        defer { try? cache?.close() }
 
         // TODO: we could wrap the failure here with diagnostics if it wasn't optional throughout
         var closeAfterRead = DelayableAction(target: cache) { try? $0.close() }
