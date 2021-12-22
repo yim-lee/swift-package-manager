@@ -22,10 +22,19 @@ import XCTest
 private typealias GeneratorModel = PackageCollectionModel.V1
 
 final class PackageCollectionsToolTests: XCTestCase {
+    @discardableResult
+    private func execute(
+        _ args: [String],
+        env: EnvironmentVariables? = nil
+    ) throws -> (exitStatus: ProcessResult.ExitStatus, stdout: String, stderr: String) {
+        let result = try SwiftPMProduct.SwiftPackageCollection.executeProcess(args, packagePath: nil, env: env)
+        return try (result.exitStatus, result.utf8Output(), result.utf8stderrOutput())
+    }
+    
     // MARK: - Generate
 
     func testGenerate() throws {
-        fixture(name: "Collections") { fixtureDir in
+        fixture(name: "Collections", createGitRepo: false) { fixtureDir in
             try withTemporaryDirectory(removeTreeOnDeinit: true) { tmpDir in
                 let archiver = ZipArchiver()
                 // Prepare test package repositories
@@ -200,7 +209,7 @@ final class PackageCollectionsToolTests: XCTestCase {
     }
 
     func testGenerateWithExcludedVersions() throws {
-        fixture(name: "Collections") { fixtureDir in
+        fixture(name: "Collections", createGitRepo: false) { fixtureDir in
             try withTemporaryDirectory(removeTreeOnDeinit: true) { tmpDir in
                 let archiver = ZipArchiver()
                 // Prepare test package repositories
@@ -320,9 +329,9 @@ final class PackageCollectionsToolTests: XCTestCase {
     // MARK: - Sign
     
     func testSign() throws {
-        fixture(name: "Collections") { fixtureDir in
+        fixture(name: "Collections", createGitRepo: false) { fixtureDir in
             try withTemporaryDirectory(removeTreeOnDeinit: true) { tmpDir in
-                let inputPath = fixtureDir.appending(components: "Generator", "test_collection.json")
+                let inputPath = fixtureDir.appending(components: "Generator", "valid.json")
                 let outputPath = tmpDir.appending(component: "test_collection_signed.json")
                 // These are not actually used since we are using MockPackageCollectionSigner
                 let privateKeyPath = fixtureDir.appending(components: "Signing", "Test_ec_key.pem")
@@ -347,6 +356,69 @@ final class PackageCollectionsToolTests: XCTestCase {
                 let signedCollection = try jsonDecoder.decode(GeneratorModel.SignedCollection.self, from: Data(bytes))
                 XCTAssertEqual("test signature", signedCollection.signature.signature)
             }
+        }
+    }
+    
+    // MARK: - Validate
+    
+    func testValidateGood() throws {
+        fixture(name: "Collections", createGitRepo: false) { fixtureDir in
+            let inputPath = fixtureDir.appending(components: "Generator", "valid.json")
+            let result = try self.execute([
+                "validate",
+                inputPath.pathString
+            ])
+            XCTAssertEqual(result.exitStatus, .terminated(code: 0))
+            XCTAssert(result.stdout.contains("package collection is valid"), "got stdout:\n" + result.stdout)
+        }
+    }
+
+    func testValidateBadJSON() throws {
+        fixture(name: "Collections", createGitRepo: false) { fixtureDir in
+            let inputPath = fixtureDir.appending(components: "Generator", "bad.json")
+            let result = try self.execute([
+                "validate",
+                inputPath.pathString
+            ])
+            XCTAssertEqual(result.exitStatus, .terminated(code: 1))
+            XCTAssert(result.stdout.contains("Failed to parse package collection"), "got stdout:\n" + result.stdout)
+        }
+    }
+
+    func testValidateCollectionWithErrors() throws {
+        fixture(name: "Collections", createGitRepo: false) { fixtureDir in
+            let inputPath = fixtureDir.appending(components: "Generator", "error-no-packages.json")
+            let result = try self.execute([
+                "validate",
+                inputPath.pathString
+            ])
+            XCTAssertEqual(result.exitStatus, .terminated(code: 1))
+            XCTAssert(result.stdout.contains("must contain at least one package"), "got stdout:\n" + result.stdout)
+        }
+    }
+
+    func testValidateCollectionWithWarnings() throws {
+        fixture(name: "Collections", createGitRepo: false) { fixtureDir in
+            let inputPath = fixtureDir.appending(components: "Generator", "warning-too-many-versions.json")
+            let result = try self.execute([
+                "validate",
+                inputPath.pathString
+            ])
+            XCTAssertEqual(result.exitStatus, .terminated(code: 0))
+            XCTAssert(result.stdout.contains("includes too many major versions"), "got stdout:\n" + result.stdout)
+        }
+    }
+
+    func testValidateWarningsAsErrors() throws {
+        fixture(name: "Collections", createGitRepo: false) { fixtureDir in
+            let inputPath = fixtureDir.appending(components: "Generator", "warning-too-many-versions.json")
+            let result = try self.execute([
+                "validate",
+                "--warnings-as-errors",
+                inputPath.pathString
+            ])
+            XCTAssertEqual(result.exitStatus, .terminated(code: 1))
+            XCTAssert(result.stdout.contains("includes too many major versions"), "got stdout:\n" + result.stdout)
         }
     }
 }

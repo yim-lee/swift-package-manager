@@ -213,7 +213,7 @@ public struct ValidationMessage: Equatable, CustomStringConvertible {
 }
 
 extension Array where Element == ValidationMessage {
-    func errors(include levels: Set<ValidationMessage.Level> = [.error]) -> [ValidationError]? {
+    public func errors(include levels: Set<ValidationMessage.Level> = [.error]) -> [ValidationError]? {
         let errors = self.filter { levels.contains($0.level) }
 
         guard !errors.isEmpty else { return nil }

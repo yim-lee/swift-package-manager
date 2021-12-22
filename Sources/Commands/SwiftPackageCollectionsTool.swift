@@ -809,9 +809,43 @@ public struct SwiftPackageCollectionsTool: ParsableCommand {
 
         @Flag(name: .long, help: "Warnings will fail validation in addition to errors")
         private var warningsAsErrors: Bool = false
+        
+        typealias Model = PackageCollectionModel.V1
 
         func run(_ swiftTool: SwiftTool) throws {
-            print("validate")
+            swiftTool.observabilityScope.emit(info: "Using input file located at \(self.inputPath)")
+
+            let jsonDecoder = JSONDecoder.makeWithDefaults()
+            let collection: Model.Collection
+            do {
+                collection = try jsonDecoder.decode(Model.Collection.self, from: Data(contentsOf: URL(fileURLWithPath: self.inputPath)))
+            } catch {
+                print("Failed to parse package collection: \(error)")
+                throw error
+            }
+
+            let validator = Model.Validator()
+            let validationMessages = validator.validate(collection: collection) ?? []
+
+            if validationMessages.isEmpty {
+                return print("The package collection is valid")
+            }
+
+            if self.warningsAsErrors {
+                if let errors = validationMessages.errors(include: [.warning, .error]), !errors.isEmpty {
+                    errors.forEach { print("error: \($0)") }
+                    throw MultipleErrors(errors)
+                }
+            } else {
+                validationMessages.filter { $0.level == .warning }.forEach { warning in
+                    print("warning: \(warning.property.map { "\($0): " } ?? "")\(warning.message)")
+                }
+                
+                if let errors = validationMessages.errors(include: [.error]), !errors.isEmpty {
+                    errors.forEach { print("error: \($0)") }
+                    throw MultipleErrors(errors)
+                }
+            }
         }
     }
     

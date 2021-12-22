@@ -1,7 +1,7 @@
 /*
  This source file is part of the Swift.org open source project
 
- Copyright (c) 2020 Apple Inc. and the Swift project authors
+ Copyright (c) 2020-2021 Apple Inc. and the Swift project authors
  Licensed under Apache License v2.0 with Runtime Library Exception
 
  See http://swift.org/LICENSE.txt for license information
@@ -11,14 +11,14 @@
 import PackageModel
 import SourceControl
 
-struct MultipleErrors: Error, CustomStringConvertible {
-    let errors: [Error]
+public struct MultipleErrors: Error, CustomStringConvertible {
+    public let errors: [Error]
     
-    init(_ errors: [Error]) {
+    public init(_ errors: [Error]) {
         self.errors = errors
     }
 
-    var description: String {
+    public var description: String {
         "\(self.errors)"
     }
 }
