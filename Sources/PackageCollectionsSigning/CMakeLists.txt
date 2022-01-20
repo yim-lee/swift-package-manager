@@ -1,6 +1,6 @@
 # This source file is part of the Swift.org open source project
 #
-# Copyright (c) 2021 Apple Inc. and the Swift project authors
+# Copyright (c) 2021-2022 Apple Inc. and the Swift project authors
 # Licensed under Apache License v2.0 with Runtime Library Exception
 #
 # See http://swift.org/LICENSE.txt for license information
@@ -39,8 +39,8 @@ target_link_libraries(PackageCollectionsSigning PUBLIC
   $<$<NOT:$<PLATFORM_ID:Darwin>>:Foundation>)
 target_link_libraries(PackageCollectionsSigning PRIVATE
   Crypto
-  CCryptoBoringSSL
-  PackageCollectionsSigningLibc)
+  $<$<NOT:$<PLATFORM_ID:Darwin>>:CCryptoBoringSSL>
+  $<$<NOT:$<PLATFORM_ID:Darwin>>:PackageCollectionsSigningLibc>)
 target_include_directories(PackageCollectionsSigning PRIVATE
   $<TARGET_PROPERTY:PackageCollectionsSigningLibc,INCLUDE_DIRECTORIES>)
   
