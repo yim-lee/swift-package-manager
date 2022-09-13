@@ -2,7 +2,7 @@
 //
 // This source file is part of the Swift open source project
 //
-// Copyright (c) 2021 Apple Inc. and the Swift project authors
+// Copyright (c) 2021-2022 Apple Inc. and the Swift project authors
 // Licensed under Apache License v2.0 with Runtime Library Exception
 //
 // See http://swift.org/LICENSE.txt for license information
@@ -20,7 +20,7 @@
  */
 
 #include <CCryptoBoringSSL_mem.h>
-#include "CPackageCollectionSigning_asn1.h"
+#include "CSigning_asn1.h"
 
 int ASN1_i2d_bio(i2d_of_void *i2d, BIO *out, unsigned char *x)
 {

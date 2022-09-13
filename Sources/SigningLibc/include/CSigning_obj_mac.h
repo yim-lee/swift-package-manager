@@ -2,7 +2,7 @@
 //
 // This source file is part of the Swift open source project
 //
-// Copyright (c) 2021 Apple Inc. and the Swift project authors
+// Copyright (c) 2021-2022 Apple Inc. and the Swift project authors
 // Licensed under Apache License v2.0 with Runtime Library Exception
 //
 // See http://swift.org/LICENSE.txt for license information
@@ -21,8 +21,8 @@
  * https://www.openssl.org/source/license.html
  */
 
-#ifndef C_PACKAGE_COLLECTION_SIGNING_OBJ_MAC_H
-#define C_PACKAGE_COLLECTION_SIGNING_OBJ_MAC_H
+#ifndef C_SIGNING_OBJ_MAC_H
+#define C_SIGNING_OBJ_MAC_H
 
 #if defined(__cplusplus)
 extern "C" {

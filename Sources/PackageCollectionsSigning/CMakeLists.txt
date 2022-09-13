@@ -1,6 +1,6 @@
 # This source file is part of the Swift open source project
 #
-# Copyright (c) 2021 Apple Inc. and the Swift project authors
+# Copyright (c) 2021-2022 Apple Inc. and the Swift project authors
 # Licensed under Apache License v2.0 with Runtime Library Exception
 #
 # See http://swift.org/LICENSE.txt for license information
@@ -40,9 +40,9 @@ target_link_libraries(PackageCollectionsSigning PUBLIC
 target_link_libraries(PackageCollectionsSigning PRIVATE
   Crypto
   CCryptoBoringSSL
-  PackageCollectionsSigningLibc)
+  SigningLibc)
 target_include_directories(PackageCollectionsSigning PRIVATE
-  $<TARGET_PROPERTY:PackageCollectionsSigningLibc,INCLUDE_DIRECTORIES>)
+  $<TARGET_PROPERTY:SigningLibc,INCLUDE_DIRECTORIES>)
   
 # NOTE(compnerd) workaround for CMake not setting up include flags yet
 set_target_properties(PackageCollectionsSigning PROPERTIES

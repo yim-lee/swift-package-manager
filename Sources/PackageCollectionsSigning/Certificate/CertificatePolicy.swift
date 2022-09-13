@@ -2,7 +2,7 @@
 //
 // This source file is part of the Swift open source project
 //
-// Copyright (c) 2021 Apple Inc. and the Swift project authors
+// Copyright (c) 2021-2022 Apple Inc. and the Swift project authors
 // Licensed under Apache License v2.0 with Runtime Library Exception
 //
 // See http://swift.org/LICENSE.txt for license information
@@ -23,7 +23,7 @@ import TSCBasic
 import Security
 #elseif os(Linux) || os(Windows) || os(Android)
 @_implementationOnly import CCryptoBoringSSL
-@_implementationOnly import PackageCollectionsSigningLibc
+@_implementationOnly import SigningLibc
 #endif
 
 let appleDistributionIOSMarker = "1.2.840.113635.100.6.1.4"

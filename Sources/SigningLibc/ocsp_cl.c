@@ -2,7 +2,7 @@
 //
 // This source file is part of the Swift open source project
 //
-// Copyright (c) 2021 Apple Inc. and the Swift project authors
+// Copyright (c) 2021-2022 Apple Inc. and the Swift project authors
 // Licensed under Apache License v2.0 with Runtime Library Exception
 //
 // See http://swift.org/LICENSE.txt for license information
@@ -21,9 +21,9 @@
 
 #include <CCryptoBoringSSL_asn1.h>
 #include <CCryptoBoringSSL_obj.h>
-#include "CPackageCollectionSigning_ocsp.h"
-#include "CPackageCollectionSigning_ocsp_local.h"
-#include "CPackageCollectionSigning_obj_mac.h"
+#include "CSigning_ocsp.h"
+#include "CSigning_ocsp_local.h"
+#include "CSigning_obj_mac.h"
 
 /*
  * Utility functions related to sending OCSP requests and extracting relevant

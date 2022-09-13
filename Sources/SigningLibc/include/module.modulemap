@@ -1,0 +1,4 @@
+module SigningLibc {
+    header "SigningLibc.h"
+    export *
+}

@@ -46,7 +46,7 @@ This product contains a derivation of Vapor's JWTKit library, specifically `JWTP
 
 ---
 
-This product contains a derivation of OpenSSL's OCSP implementation, found under the `PackageCollectionsSigningLibc` module.
+This product contains a derivation of OpenSSL's OCSP implementation, found under the `SigningLibc` module.
 
   * LICENSE (Apache License 2.0):
     * https://www.apache.org/licenses/LICENSE-2.0

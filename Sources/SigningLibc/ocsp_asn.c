@@ -2,7 +2,7 @@
 //
 // This source file is part of the Swift open source project
 //
-// Copyright (c) 2021 Apple Inc. and the Swift project authors
+// Copyright (c) 2021-2022 Apple Inc. and the Swift project authors
 // Licensed under Apache License v2.0 with Runtime Library Exception
 //
 // See http://swift.org/LICENSE.txt for license information
@@ -20,9 +20,9 @@
  */
 
 #include <CCryptoBoringSSL_asn1t.h>
-#include "CPackageCollectionSigning_asn1.h"
-#include "CPackageCollectionSigning_ocsp.h"
-#include "CPackageCollectionSigning_ocsp_local.h"
+#include "CSigning_asn1.h"
+#include "CSigning_ocsp.h"
+#include "CSigning_ocsp_local.h"
 
 ASN1_SEQUENCE(OCSP_SIGNATURE) = {
         ASN1_SIMPLE(OCSP_SIGNATURE, signatureAlgorithm, X509_ALGOR),

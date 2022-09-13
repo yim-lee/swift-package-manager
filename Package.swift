@@ -72,7 +72,7 @@ var packageCollectionsSigningDeps: [Target.Dependency] = [
 packageCollectionsSigningTargets.append(
     .target(
         /** Package collections signing C lib */
-        name: "PackageCollectionsSigningLibc",
+        name: "SigningLibc",
         dependencies: [
             .product(name: "Crypto", package: "swift-crypto"), // for CCryptoBoringSSL
         ],
@@ -82,7 +82,7 @@ packageCollectionsSigningTargets.append(
         ]
     )
 )
-packageCollectionsSigningDeps.append("PackageCollectionsSigningLibc")
+packageCollectionsSigningDeps.append("SigningLibc")
 #endif
 // Define PackageCollectionsSigning target always
 packageCollectionsSigningTargets.append(
