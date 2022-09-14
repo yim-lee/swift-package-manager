@@ -13,21 +13,21 @@
 import Foundation
 import XCTest
 
-@testable import PackageCollectionsSigning
-import SPMTestSupport
+@testable import Signing
+@testable import SPMTestSupport
 import TSCBasic
 
 class SignatureTests: XCTestCase {
     func test_RS256_generateAndValidate_happyCase() throws {
         try skipIfUnsupportedPlatform()
 
-        try fixture(name: "Collections", createGitRepo: false) { fixturePath in
+        try fixture(name: "Signing", createGitRepo: false) { fixturePath in
             let jsonEncoder = JSONEncoder()
             let jsonDecoder = JSONDecoder()
 
             let payload = ["foo": "bar"]
 
-            let certPath = fixturePath.appending(components: "Signing", "Test_rsa.cer")
+            let certPath = fixturePath.appending(components: "Certificates", "Test_rsa.cer")
             let certData: Data = try localFileSystem.readFileContents(certPath)
             let base64EncodedCert = certData.base64EncodedString()
             let certificate = try Certificate(derEncoded: certData)
@@ -47,13 +47,13 @@ class SignatureTests: XCTestCase {
     func test_RS256_generateAndValidate_keyMismatch() throws {
         try skipIfUnsupportedPlatform()
 
-        try fixture(name: "Collections", createGitRepo: false) { fixturePath in
+        try fixture(name: "Signing", createGitRepo: false) { fixturePath in
             let jsonEncoder = JSONEncoder()
             let jsonDecoder = JSONDecoder()
 
             let payload = ["foo": "bar"]
 
-            let certPath = fixturePath.appending(components: "Signing", "Test_rsa.cer")
+            let certPath = fixturePath.appending(components: "Certificates", "Test_rsa.cer")
             let certData: Data = try localFileSystem.readFileContents(certPath)
             let base64EncodedCert = certData.base64EncodedString()
             let certificate = try Certificate(derEncoded: certData)
@@ -76,13 +76,13 @@ class SignatureTests: XCTestCase {
     func test_ES256_generateAndValidate_happyCase() throws {
         try skipIfUnsupportedPlatform()
 
-        try fixture(name: "Collections", createGitRepo: false) { fixturePath in
+        try fixture(name: "Signing", createGitRepo: false) { fixturePath in
             let jsonEncoder = JSONEncoder()
             let jsonDecoder = JSONDecoder()
 
             let payload = ["foo": "bar"]
 
-            let certPath = fixturePath.appending(components: "Signing", "Test_ec.cer")
+            let certPath = fixturePath.appending(components: "Certificates", "Test_ec.cer")
             let certData: Data = try localFileSystem.readFileContents(certPath)
             let base64EncodedCert = certData.base64EncodedString()
             let certificate = try Certificate(derEncoded: certData)
@@ -102,13 +102,13 @@ class SignatureTests: XCTestCase {
     func test_ES256_generateAndValidate_keyMismatch() throws {
         try skipIfUnsupportedPlatform()
 
-        try fixture(name: "Collections", createGitRepo: false) { fixturePath in
+        try fixture(name: "Signing", createGitRepo: false) { fixturePath in
             let jsonEncoder = JSONEncoder()
             let jsonDecoder = JSONDecoder()
 
             let payload = ["foo": "bar"]
 
-            let certPath = fixturePath.appending(components: "Signing", "Test_ec.cer")
+            let certPath = fixturePath.appending(components: "Certificates", "Test_ec.cer")
             let certData: Data = try localFileSystem.readFileContents(certPath)
             let base64EncodedCert = certData.base64EncodedString()
             let certificate = try Certificate(derEncoded: certData)

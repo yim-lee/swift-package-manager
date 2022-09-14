@@ -39,7 +39,7 @@ let supportedCriticalExtensions: Set<String> = [appleSwiftPackageCollectionMarke
                                                 "1.2.840.113635.100.6.1.2", "1.2.840.113635.100.6.1.12"]
 #endif
 
-protocol CertificatePolicy {
+public protocol CertificatePolicy {
     /// Validates the given certificate chain.
     ///
     /// - Parameters:
@@ -570,7 +570,7 @@ extension CertificatePolicy {
     }
 }
 
-enum CertificatePolicyError: Error, Equatable {
+public enum CertificatePolicyError: Error, Equatable {
     case emptyCertChain
     case trustSetupFailure
     case invalidCertChain
@@ -604,7 +604,7 @@ private enum OCSPError: Error {
 ///   - The certificate must not be revoked. The certificate authority must support OCSP, which means the certificate must have the
 ///   "Certificate Authority Information Access" extension that includes OCSP as a method, specifying the responder’s URL.
 ///   - The certificate chain is valid and root certificate must be trusted.
-struct DefaultCertificatePolicy: CertificatePolicy {
+public struct DefaultCertificatePolicy: CertificatePolicy {
     let trustedRoots: [Certificate]?
     let expectedSubjectUserID: String?
 
@@ -627,7 +627,13 @@ struct DefaultCertificatePolicy: CertificatePolicy {
     ///                                 while this is configured by SwiftPM and static.
     ///   - expectedSubjectUserID: The subject user ID that must match if specified.
     ///   - callbackQueue: The `DispatchQueue` to use for callbacks
-    init(trustedRootCertsDir: URL?, additionalTrustedRootCerts: [Certificate]?, expectedSubjectUserID: String? = nil, observabilityScope: ObservabilityScope, callbackQueue: DispatchQueue) {
+    public init(
+        trustedRootCertsDir: URL?,
+        additionalTrustedRootCerts: [Certificate]?,
+        expectedSubjectUserID: String? = nil,
+        observabilityScope: ObservabilityScope,
+        callbackQueue: DispatchQueue
+    ) {
         #if !(os(macOS) || os(Linux) || os(Windows) || os(Android))
         fatalError("Unsupported: \(#function)")
         #else
@@ -650,7 +656,7 @@ struct DefaultCertificatePolicy: CertificatePolicy {
         self.observabilityScope = observabilityScope
     }
 
-    func validate(certChain: [Certificate], callback: @escaping (Result<Void, Error>) -> Void) {
+    public func validate(certChain: [Certificate], callback: @escaping (Result<Void, Error>) -> Void) {
         #if !(os(macOS) || os(Linux) || os(Windows) || os(Android))
         fatalError("Unsupported: \(#function)")
         #else
@@ -694,7 +700,7 @@ struct DefaultCertificatePolicy: CertificatePolicy {
 ///
 /// This has the same requirements as `DefaultCertificatePolicy` plus additional
 /// marker extensions for Swift Package Collection certifiications.
-struct AppleSwiftPackageCollectionCertificatePolicy: CertificatePolicy {
+public struct AppleSwiftPackageCollectionCertificatePolicy: CertificatePolicy {
     private static let expectedCertChainLength = 3
 
     let trustedRoots: [Certificate]?
@@ -719,7 +725,13 @@ struct AppleSwiftPackageCollectionCertificatePolicy: CertificatePolicy {
     ///                                 while this is configured by SwiftPM and static.
     ///   - expectedSubjectUserID: The subject user ID that must match if specified.
     ///   - callbackQueue: The `DispatchQueue` to use for callbacks
-    init(trustedRootCertsDir: URL?, additionalTrustedRootCerts: [Certificate]?, expectedSubjectUserID: String? = nil, observabilityScope: ObservabilityScope, callbackQueue: DispatchQueue) {
+    public init(
+        trustedRootCertsDir: URL?,
+        additionalTrustedRootCerts: [Certificate]?,
+        expectedSubjectUserID: String? = nil,
+        observabilityScope: ObservabilityScope,
+        callbackQueue: DispatchQueue
+    ) {
         #if !(os(macOS) || os(Linux) || os(Windows) || os(Android))
         fatalError("Unsupported: \(#function)")
         #else
@@ -742,7 +754,7 @@ struct AppleSwiftPackageCollectionCertificatePolicy: CertificatePolicy {
         self.observabilityScope = observabilityScope
     }
 
-    func validate(certChain: [Certificate], callback: @escaping (Result<Void, Error>) -> Void) {
+    public func validate(certChain: [Certificate], callback: @escaping (Result<Void, Error>) -> Void) {
         #if !(os(macOS) || os(Linux) || os(Windows) || os(Android))
         fatalError("Unsupported: \(#function)")
         #else
@@ -798,7 +810,7 @@ struct AppleSwiftPackageCollectionCertificatePolicy: CertificatePolicy {
 ///
 /// This has the same requirements as `DefaultCertificatePolicy` plus additional
 /// marker extensions for Apple Distribution certifiications.
-struct AppleDistributionCertificatePolicy: CertificatePolicy {
+public struct AppleDistributionCertificatePolicy: CertificatePolicy {
     private static let expectedCertChainLength = 3
 
     let trustedRoots: [Certificate]?
@@ -823,7 +835,13 @@ struct AppleDistributionCertificatePolicy: CertificatePolicy {
     ///                                 while this is configured by SwiftPM and static.
     ///   - expectedSubjectUserID: The subject user ID that must match if specified.
     ///   - callbackQueue: The `DispatchQueue` to use for callbacks
-    init(trustedRootCertsDir: URL?, additionalTrustedRootCerts: [Certificate]?, expectedSubjectUserID: String? = nil, observabilityScope: ObservabilityScope, callbackQueue: DispatchQueue) {
+    public init(
+        trustedRootCertsDir: URL?,
+        additionalTrustedRootCerts: [Certificate]?,
+        expectedSubjectUserID: String? = nil,
+        observabilityScope: ObservabilityScope,
+        callbackQueue: DispatchQueue
+    ) {
         #if !(os(macOS) || os(Linux) || os(Windows) || os(Android))
         fatalError("Unsupported: \(#function)")
         #else
@@ -846,7 +864,7 @@ struct AppleDistributionCertificatePolicy: CertificatePolicy {
         self.observabilityScope = observabilityScope
     }
 
-    func validate(certChain: [Certificate], callback: @escaping (Result<Void, Error>) -> Void) {
+    public func validate(certChain: [Certificate], callback: @escaping (Result<Void, Error>) -> Void) {
         #if !(os(macOS) || os(Linux) || os(Windows) || os(Android))
         fatalError("Unsupported: \(#function)")
         #else

@@ -41,6 +41,7 @@ target_link_libraries(PackageCollections PUBLIC
   PackageCollectionsModel
   PackageCollectionsSigning
   PackageModel
+  Signing
   SourceControl)
 # NOTE(compnerd) workaround for CMake not setting up include flags yet
 set_target_properties(PackageCollections PROPERTIES

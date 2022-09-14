@@ -2,7 +2,7 @@
 //
 // This source file is part of the Swift open source project
 //
-// Copyright (c) 2021 Apple Inc. and the Swift project authors
+// Copyright (c) 2021-2022 Apple Inc. and the Swift project authors
 // Licensed under Apache License v2.0 with Runtime Library Exception
 //
 // See http://swift.org/LICENSE.txt for license information
@@ -13,14 +13,14 @@
 import Basics
 import Dispatch
 import Foundation
-@testable import PackageCollectionsSigning
+@testable import Signing
 import TSCBasic
 import XCTest
 
 // Set `REAL_CERT_USER_ID` env var when running ENABLE_REAL_CERT_TEST tests
 let expectedSubjectUserID = ProcessInfo.processInfo.environment["REAL_CERT_USER_ID"] ?? "<USER ID>"
 
-let callbackQueue = DispatchQueue(label: "org.swift.swiftpm.PackageCollectionsSigningTests", attributes: .concurrent)
+let callbackQueue = DispatchQueue(label: "org.swift.swiftpm.SigningTests", attributes: .concurrent)
 
 // MARK: - CertificatePolicy for test certs
 

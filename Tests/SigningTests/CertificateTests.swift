@@ -13,16 +13,16 @@
 import Foundation
 import XCTest
 
-@testable import PackageCollectionsSigning
-import SPMTestSupport
+@testable import Signing
+@testable import SPMTestSupport
 import TSCBasic
 
 class CertificateTests: XCTestCase {
     func test_withRSAKey_fromDER() throws {
         try skipIfUnsupportedPlatform()
 
-        try fixture(name: "Collections", createGitRepo: false) { fixturePath in
-            let path = fixturePath.appending(components: "Signing", "Test_rsa.cer")
+        try fixture(name: "Signing", createGitRepo: false) { fixturePath in
+            let path = fixturePath.appending(components: "Certificates", "Test_rsa.cer")
             let data: Data = try localFileSystem.readFileContents(path)
 
             let certificate = try Certificate(derEncoded: data)
@@ -44,8 +44,8 @@ class CertificateTests: XCTestCase {
     func test_withECKey_fromDER() throws {
         try skipIfUnsupportedPlatform()
 
-        try fixture(name: "Collections", createGitRepo: false) { fixturePath in
-            let path = fixturePath.appending(components: "Signing", "Test_ec.cer")
+        try fixture(name: "Signing", createGitRepo: false) { fixturePath in
+            let path = fixturePath.appending(components: "Certificates", "Test_ec.cer")
             let data: Data = try localFileSystem.readFileContents(path)
 
             let certificate = try Certificate(derEncoded: data)

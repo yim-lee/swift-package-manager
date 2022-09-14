@@ -2,7 +2,7 @@
 //
 // This source file is part of the Swift open source project
 //
-// Copyright (c) 2021 Apple Inc. and the Swift project authors
+// Copyright (c) 2021-2022 Apple Inc. and the Swift project authors
 // Licensed under Apache License v2.0 with Runtime Library Exception
 //
 // See http://swift.org/LICENSE.txt for license information
@@ -17,10 +17,10 @@ import Crypto
 typealias CryptoECPrivateKey = P256.Signing.PrivateKey
 typealias CryptoECPublicKey = P256.Signing.PublicKey
 
-struct ECPrivateKey: PrivateKey {
+public struct ECPrivateKey: PrivateKey {
     let underlying: CryptoECPrivateKey
 
-    init<Data>(pem data: Data) throws where Data: DataProtocol {
+    public init<Data>(pem data: Data) throws where Data: DataProtocol {
         let pem = String(decoding: data, as: UTF8.self)
         #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
         if #available(macOS 11.0, iOS 14.0, watchOS 7.0, tvOS 14.0, *) {
@@ -36,15 +36,15 @@ struct ECPrivateKey: PrivateKey {
     }
 }
 
-struct ECPublicKey: PublicKey {
+public struct ECPublicKey: PublicKey {
     let underlying: CryptoECPublicKey
 
     /// `data` should follow the ANSI X9.63 standard format
-    init(data: Data) throws {
+    public init(data: Data) throws {
         self.underlying = try CryptoECPublicKey(x963Representation: data)
     }
 
-    init<Data>(pem data: Data) throws where Data: DataProtocol {
+    public init<Data>(pem data: Data) throws where Data: DataProtocol {
         let pem = String(decoding: data, as: UTF8.self)
         #if os(macOS) || os(iOS) || os(watchOS) || os(tvOS)
         if #available(macOS 11.0, iOS 14.0, watchOS 7.0, tvOS 14.0, *) {

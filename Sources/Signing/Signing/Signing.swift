@@ -2,7 +2,7 @@
 //
 // This source file is part of the Swift open source project
 //
-// Copyright (c) 2021 Apple Inc. and the Swift project authors
+// Copyright (c) 2021-2022 Apple Inc. and the Swift project authors
 // Licensed under Apache License v2.0 with Runtime Library Exception
 //
 // See http://swift.org/LICENSE.txt for license information
@@ -12,7 +12,7 @@
 
 import struct Foundation.Data
 
-protocol MessageSigner {
+public protocol MessageSigner {
     /// Signs a message.
     ///
     /// - Returns:The message's signature.
@@ -22,7 +22,7 @@ protocol MessageSigner {
     func sign(message: Data) throws -> Data
 }
 
-protocol MessageValidator {
+public protocol MessageValidator {
     /// Checks if a signature is valid for a message.
     ///
     /// - Parameters:

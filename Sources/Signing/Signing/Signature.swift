@@ -2,7 +2,7 @@
 //
 // This source file is part of the Swift open source project
 //
-// Copyright (c) 2021 Apple Inc. and the Swift project authors
+// Copyright (c) 2021-2022 Apple Inc. and the Swift project authors
 // Licensed under Apache License v2.0 with Runtime Library Exception
 //
 // See http://swift.org/LICENSE.txt for license information
@@ -28,18 +28,24 @@ import Foundation
 // The logic in this source file loosely follows https://www.rfc-editor.org/rfc/rfc7515.html
 // for JSON Web Signature (JWS).
 
-struct Signature {
-    let header: Header
-    let payload: Data
-    let signature: Data
+public struct Signature {
+    public let header: Header
+    public let payload: Data
+    public let signature: Data
+    
+    public init(header: Header, payload: Data, signature: Data) {
+        self.header = header
+        self.payload = payload
+        self.signature = signature
+    }
 }
 
 extension Signature {
-    enum Algorithm: String, Codable {
+    public enum Algorithm: String, Codable {
         case RS256 // RSASSA-PKCS1-v1_5 using SHA-256
         case ES256 // ECDSA using P-256 and SHA-256
 
-        static func from(keyType: KeyType) -> Algorithm {
+        public static func from(keyType: KeyType) -> Algorithm {
             switch keyType {
             case .RSA:
                 return .RS256
@@ -49,7 +55,7 @@ extension Signature {
         }
     }
 
-    struct Header: Equatable, Codable {
+    public struct Header: Equatable, Codable {
         // https://www.rfc-editor.org/rfc/rfc7515.html#section-4.1.1
         let algorithm: Algorithm
 
@@ -60,15 +66,22 @@ extension Signature {
             case algorithm = "alg"
             case certChain = "x5c"
         }
+        
+        public init(algorithm: Algorithm, certChain: [String]) {
+            self.algorithm = algorithm
+            self.certChain = certChain
+        }
     }
 }
 
 // Reference: https://github.com/vapor/jwt-kit/blob/master/Sources/JWTKit/JWTSerializer.swift
 extension Signature {
-    static func generate<Payload>(for payload: Payload,
-                                  with header: Header,
-                                  using signer: MessageSigner,
-                                  jsonEncoder: JSONEncoder) throws -> Data where Payload: Encodable {
+    public static func generate<Payload>(
+        for payload: Payload,
+        with header: Header,
+        using signer: MessageSigner,
+        jsonEncoder: JSONEncoder
+    ) throws -> Data where Payload: Encodable {
         let headerData = try jsonEncoder.encode(header)
         let encodedHeader = headerData.base64URLEncodedBytes()
 
@@ -92,20 +105,24 @@ extension Signature {
 
 // Reference: https://github.com/vapor/jwt-kit/blob/master/Sources/JWTKit/JWTParser.swift
 extension Signature {
-    typealias CertChainValidate = ([Data], @escaping (Result<[Certificate], Error>) -> Void) -> Void
+    public typealias CertChainValidate = ([Data], @escaping (Result<[Certificate], Error>) -> Void) -> Void
 
-    static func parse(_ signature: String,
-                      certChainValidate: CertChainValidate,
-                      jsonDecoder: JSONDecoder,
-                      callback: @escaping (Result<Signature, Error>) -> Void) {
+    public static func parse(
+        _ signature: String,
+        certChainValidate: CertChainValidate,
+        jsonDecoder: JSONDecoder,
+        callback: @escaping (Result<Signature, Error>) -> Void
+    ) {
         let bytes = Array(signature.utf8)
         Self.parse(bytes, certChainValidate: certChainValidate, jsonDecoder: jsonDecoder, callback: callback)
     }
 
-    static func parse<SignatureData>(_ signature: SignatureData,
-                                     certChainValidate: CertChainValidate,
-                                     jsonDecoder: JSONDecoder,
-                                     callback: @escaping (Result<Signature, Error>) -> Void) where SignatureData: DataProtocol {
+    public static func parse<SignatureData>(
+        _ signature: SignatureData,
+        certChainValidate: CertChainValidate,
+        jsonDecoder: JSONDecoder,
+        callback: @escaping (Result<Signature, Error>) -> Void
+    ) where SignatureData: DataProtocol {
         let parts = signature.copyBytes().split(separator: .period)
         guard parts.count == 3 else {
             return callback(.failure(SignatureError.malformedSignature))

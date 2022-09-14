@@ -17,6 +17,7 @@ import Basics
 @testable import PackageCollections
 import PackageCollectionsSigning
 import PackageModel
+import Signing
 import SourceControl
 import SPMTestSupport
 import TSCBasic

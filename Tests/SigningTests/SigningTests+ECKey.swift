@@ -2,7 +2,7 @@
 //
 // This source file is part of the Swift open source project
 //
-// Copyright (c) 2021 Apple Inc. and the Swift project authors
+// Copyright (c) 2021-2022 Apple Inc. and the Swift project authors
 // Licensed under Apache License v2.0 with Runtime Library Exception
 //
 // See http://swift.org/LICENSE.txt for license information
@@ -13,14 +13,15 @@
 import Foundation
 import XCTest
 
-@testable import PackageCollectionsSigning
+@testable import Signing
+@testable import SPMTestSupport
 
-class RSAKeySigningTests: XCTestCase {
+class ECKeySigningTests: XCTestCase {
     func test_signAndValidate_happyCase() throws {
         try skipIfUnsupportedPlatform()
 
-        let privateKey = try RSAPrivateKey(pem: rsaPrivateKey.bytes)
-        let publicKey = try RSAPublicKey(pem: rsaPublicKey.bytes)
+        let privateKey = try ECPrivateKey(pem: ecPrivateKey.bytes)
+        let publicKey = try ECPublicKey(pem: ecPublicKey.bytes)
 
         let message = try JSONEncoder().encode(["foo": "bar"])
         let signature = try privateKey.sign(message: message)
@@ -30,8 +31,8 @@ class RSAKeySigningTests: XCTestCase {
     func test_signAndValidate_mismatch() throws {
         try skipIfUnsupportedPlatform()
 
-        let privateKey = try RSAPrivateKey(pem: rsaPrivateKey.bytes)
-        let publicKey = try RSAPublicKey(pem: rsaPublicKey.bytes)
+        let privateKey = try ECPrivateKey(pem: ecPrivateKey.bytes)
+        let publicKey = try ECPublicKey(pem: ecPublicKey.bytes)
 
         let jsonEncoder = JSONEncoder()
         let message = try jsonEncoder.encode(["foo": "bar"])

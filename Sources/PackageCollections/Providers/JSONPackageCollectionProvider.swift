@@ -21,6 +21,7 @@ import struct Foundation.URL
 import PackageCollectionsModel
 import PackageCollectionsSigning
 import PackageModel
+import Signing
 import SourceControl
 import TSCBasic
 

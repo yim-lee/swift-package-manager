@@ -2,7 +2,7 @@
 //
 // This source file is part of the Swift open source project
 //
-// Copyright (c) 2021 Apple Inc. and the Swift project authors
+// Copyright (c) 2021-2022 Apple Inc. and the Swift project authors
 // Licensed under Apache License v2.0 with Runtime Library Exception
 //
 // See http://swift.org/LICENSE.txt for license information
@@ -12,7 +12,7 @@
 
 import Foundation
 
-protocol PrivateKey: MessageSigner {
+public protocol PrivateKey: MessageSigner {
     /// Creates a private key from PEM.
     ///
     /// - Parameters:
@@ -20,7 +20,7 @@ protocol PrivateKey: MessageSigner {
     init<Data>(pem data: Data) throws where Data: DataProtocol
 }
 
-protocol PublicKey: MessageValidator {
+public protocol PublicKey: MessageValidator {
     /// Creates a public key from raw bytes.
     ///
     /// Refer to implementation for details on what representation the raw bytes should be.
@@ -38,7 +38,7 @@ enum KeyError: Error {
     case invalidData
 }
 
-enum KeyType {
+public enum KeyType {
     case RSA
     case EC
 }

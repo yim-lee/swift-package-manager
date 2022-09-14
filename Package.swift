@@ -61,17 +61,16 @@ if useSwiftCryptoV2 {
     swiftSettings.append(.define("CRYPTO_v2"))
 }
 
-var packageCollectionsSigningTargets = [Target]()
-var packageCollectionsSigningDeps: [Target.Dependency] = [
+var signingTargets = [Target]()
+var signingDeps: [Target.Dependency] = [
     "Basics",
     .product(name: "Crypto", package: "swift-crypto"),
-    "PackageCollectionsModel",
 ]
 // swift-crypto's Crypto module depends on CCryptoBoringSSL on these platforms only
 #if os(Linux) || os(Windows) || os(Android)
-packageCollectionsSigningTargets.append(
+signingTargets.append(
     .target(
-        /** Package collections signing C lib */
+        /** C lib to support signing functionality */
         name: "SigningLibc",
         dependencies: [
             .product(name: "Crypto", package: "swift-crypto"), // for CCryptoBoringSSL
@@ -82,14 +81,14 @@ packageCollectionsSigningTargets.append(
         ]
     )
 )
-packageCollectionsSigningDeps.append("SigningLibc")
+signingDeps.append("SigningLibc")
 #endif
 // Define PackageCollectionsSigning target always
-packageCollectionsSigningTargets.append(
+signingTargets.append(
     .target(
-         /** Package collections signing */
-         name: "PackageCollectionsSigning",
-         dependencies: packageCollectionsSigningDeps,
+         /** General purpose signing (e.g., package collections) library */
+         name: "Signing",
+         dependencies: signingDeps,
          exclude: ["CMakeLists.txt"],
          swiftSettings: swiftSettings
     )
@@ -143,7 +142,7 @@ let package = Package(
             ]
         ),
     ],
-    targets: packageCollectionsSigningTargets + [
+    targets: signingTargets + [
         // The `PackageDescription` target provides the API that is available
         // to `Package.swift` manifests. Here we build a debug version of the
         // library; the bootstrap scripts build the deployable version.
@@ -263,6 +262,18 @@ let package = Package(
                 "CMakeLists.txt",
                 "Formats/v1.md"
             ]
+        ),
+        
+        .target(
+             /** Package collections signing */
+             name: "PackageCollectionsSigning",
+             dependencies: [
+                "Basics",
+                "PackageCollectionsModel",
+                "Signing",
+             ],
+             exclude: ["CMakeLists.txt"],
+             swiftSettings: swiftSettings
         ),
 
         .target(
@@ -405,6 +416,7 @@ let package = Package(
                 "PackageGraph",
                 "PackageLoading",
                 "PackageRegistry",
+                "Signing",
                 "SourceControl",
                 .product(name: "TSCTestSupport", package: "swift-tools-support-core"),
                 "Workspace",
@@ -526,6 +538,10 @@ let package = Package(
         .testTarget(
             name: "PackageRegistryTests",
             dependencies: ["SPMTestSupport", "PackageRegistry"]
+        ),
+        .testTarget(
+            name: "SigningTests",
+            dependencies: ["Signing", "SPMTestSupport"]
         ),
         .testTarget(
             name: "SourceControlTests",

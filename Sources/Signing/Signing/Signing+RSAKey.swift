@@ -2,7 +2,7 @@
 //
 // This source file is part of the Swift open source project
 //
-// Copyright (c) 2021 Apple Inc. and the Swift project authors
+// Copyright (c) 2021-2022 Apple Inc. and the Swift project authors
 // Licensed under Apache License v2.0 with Runtime Library Exception
 //
 // See http://swift.org/LICENSE.txt for license information
@@ -35,7 +35,7 @@ import Security
 
 #if os(macOS)
 extension CoreRSAPrivateKey {
-    func sign(message: Data) throws -> Data {
+    public func sign(message: Data) throws -> Data {
         var error: Unmanaged<CFError>?
         guard let signature = SecKeyCreateSignature(self.underlying,
                                                     .rsaSignatureMessagePKCS1v15SHA256,
@@ -48,7 +48,7 @@ extension CoreRSAPrivateKey {
 }
 
 extension CoreRSAPublicKey {
-    func isValidSignature(_ signature: Data, for message: Data) throws -> Bool {
+    public func isValidSignature(_ signature: Data, for message: Data) throws -> Bool {
         SecKeyVerifySignature(
             self.underlying,
             .rsaSignatureMessagePKCS1v15SHA256,
@@ -70,7 +70,7 @@ extension BoringSSLRSAPrivateKey: BoringSSLSigning {
         Self.algorithm
     }
 
-    func sign(message: Data) throws -> Data {
+    public func sign(message: Data) throws -> Data {
         let digest = try self.digest(message)
 
         var signatureLength: UInt32 = 0
@@ -101,7 +101,7 @@ extension BoringSSLRSAPublicKey: BoringSSLSigning {
         Self.algorithm
     }
 
-    func isValidSignature(_ signature: Data, for message: Data) throws -> Bool {
+    public func isValidSignature(_ signature: Data, for message: Data) throws -> Bool {
         let digest = try self.digest(message)
         let signature = signature.copyBytes()
 
@@ -120,13 +120,13 @@ extension BoringSSLRSAPublicKey: BoringSSLSigning {
 
 #else
 extension UnsupportedRSAPrivateKey {
-    func sign(message: Data) throws -> Data {
+    public func sign(message: Data) throws -> Data {
         fatalError("Unsupported: \(#function)")
     }
 }
 
 extension UnsupportedRSAPublicKey {
-    func isValidSignature(_ signature: Data, for message: Data) throws -> Bool {
+    public func isValidSignature(_ signature: Data, for message: Data) throws -> Bool {
         fatalError("Unsupported: \(#function)")
     }
 }
