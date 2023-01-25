@@ -207,6 +207,12 @@ let package = Package(
             ],
             exclude: ["CMakeLists.txt"]
         ),
+        
+        .target(
+            /** Package signing */
+            name: "PackageSigning",
+            dependencies: ["Basics"]
+        ),
 
         .target(
             /** Source control operations */
@@ -636,6 +642,10 @@ let package = Package(
         .testTarget(
             name: "PackageRegistryTests",
             dependencies: ["SPMTestSupport", "PackageRegistry"]
+        ),
+        .testTarget(
+            name: "PackageSigningTests",
+            dependencies: ["SPMTestSupport", "PackageSigning"]
         ),
         .testTarget(
             name: "SourceControlTests",
