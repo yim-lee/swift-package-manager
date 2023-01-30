@@ -32,5 +32,7 @@ class SigningIdentityTests: XCTestCase {
         let signer = CMSProvider(observabilityScope: ObservabilitySystem.NOOP)
         let signature = try signer.sign(content, with: signingIdentity).get()
         print(signature.base64EncodedString())
+        
+        try signer.validate(signature: signature, signs: content).get()
     }
 }

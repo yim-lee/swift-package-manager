@@ -31,7 +31,7 @@ public struct CMSProvider {
         var cmsEncoder: CMSEncoder!
         var status = CMSEncoderCreate(&cmsEncoder)
         guard status == errSecSuccess else {
-            return .failure(SigningError.initializationError)
+            return .failure(.encoderInitializationError)
         }
 
         CMSEncoderAddSigners(cmsEncoder, signingIdentity.underlying)
@@ -52,6 +52,65 @@ public struct CMSProvider {
 
         return .success(signature as Data)
     }
+    
+    public func validate(signature: Data, signs content: Data) -> Result<Void, SigningError> {
+        var cmsDecoder: CMSDecoder!
+        var status = CMSDecoderCreate(&cmsDecoder)
+        guard status == errSecSuccess else {
+            return .failure(.decoderInitializationError)
+        }
+
+        CMSDecoderSetDetachedContent(cmsDecoder, content as CFData)
+        
+        status = CMSDecoderUpdateMessage(cmsDecoder, [UInt8](signature), signature.count)
+        guard status == errSecSuccess else {
+            return .failure(.decoderInitializationError)
+        }
+        status = CMSDecoderFinalizeMessage(cmsDecoder)
+        guard status == errSecSuccess else {
+            return .failure(.decoderInitializationError)
+        }
+        
+        var signerStatus = CMSSignerStatus.needsDetachedContent
+        var trust: SecTrust?
+        var certificateVerifyResult: OSStatus = errSecSuccess
+
+        let basicPolicy = SecPolicyCreateBasicX509()
+        let revocationPolicy = SecPolicyCreateRevocation(kSecRevocationOCSPMethod)
+        CMSDecoderCopySignerStatus(cmsDecoder, 0, [basicPolicy, revocationPolicy] as CFArray, true, &signerStatus, &trust, &certificateVerifyResult)
+        
+        guard signerStatus == .valid else {
+            return .failure(.invalidSignature)
+        }
+        guard certificateVerifyResult == errSecSuccess else {
+            return .failure(.invalidCertificate)
+        }
+        guard let trust = trust else {
+            return .failure(.untrustedCertificate)
+        }
+
+        SecTrustSetNetworkFetchAllowed(trust, true)
+        // TODO: Custom trusted roots
+//        SecTrustSetAnchorCertificates(trust, trustedCAs as CFArray)
+//        SecTrustSetAnchorCertificatesOnly(trust, true)
+        
+        guard SecTrustEvaluateWithError(trust, nil) else {
+            return .failure(.untrustedCertificate)
+        }
+
+        if let trustResult = SecTrustCopyResult(trust) as? [String: Any],
+           let trustRevocationChecked = trustResult[kSecTrustRevocationChecked as String] as? Bool {
+            if !trustRevocationChecked {
+                self.observabilityScope.emit(warning: "Certificate has been revoked")
+            } else {
+                self.observabilityScope.emit(debug: "Certificate is valid")
+            }
+        } else {
+            self.observabilityScope.emit(warning: "Certificate revocation status unknown")
+        }
+        
+        return .success(())
+    }
 }
 #else
 public struct CMSProvider {
@@ -62,6 +121,10 @@ public struct CMSProvider {
 #endif
 
 public enum SigningError: Error {
-    case initializationError
+    case encoderInitializationError
+    case decoderInitializationError
+    case invalidSignature
+    case invalidCertificate
+    case untrustedCertificate
     case other(String)
 }
