@@ -16,6 +16,9 @@ import struct Foundation.Data
 import Security
 #endif
 
+import SwiftASN1
+import X509
+
 // MARK: - SigningEntity is the entity that generated the signature
 
 public struct SigningEntity {
@@ -33,56 +36,37 @@ public struct SigningEntity {
         self = try provider.signingEntity(of: signature)
     }
 
+    // TODO: shouldn't need this
     #if os(macOS)
-    init(certificate: SecCertificate) {
-        self.type = certificate.signingEntityType
-        self.name = certificate.commonName
-
-        guard let dict = SecCertificateCopyValues(certificate, nil, nil) as? [CFString: Any],
-              let subjectDict = dict[kSecOIDX509V1SubjectName] as? [CFString: Any],
-              let propValueList = subjectDict[kSecPropertyKeyValue] as? [[String: Any]]
-        else {
-            self.organizationalUnit = nil
-            self.organization = nil
-            return
-        }
-
-        let props = propValueList.reduce(into: [String: String]()) { result, item in
-            if let label = item["label"] as? String, let value = item["value"] as? String {
-                result[label] = value
-            }
-        }
-
-        self.organizationalUnit = props[kSecOIDOrganizationalUnitName as String]
-        self.organization = props[kSecOIDOrganizationName as String]
+    init(certificate: SecCertificate) throws {
+        try self.init(certificate: Certificate(certificate))
     }
     #endif
 
     init(certificate: Certificate) {
-        // TODO: extract id, name, organization, etc. from cert
-        fatalError("TO BE IMPLEMENTED")
+        self.type = certificate.signingEntityType
+        self.name = certificate.subject.commonName
+        self.organizationalUnit = certificate.subject.organizationalUnitName
+        self.organization = certificate.subject.organizationName
     }
 }
 
-// MARK: - SigningEntity types that SwiftPM recognizes
+// MARK: - Types of SigningEntity that SwiftPM recognizes
 
 public enum SigningEntityType {
     case adp // Apple Developer Program
-
-    static let oid_adpSwiftPackageMarker = "1.2.840.113635.100.6.1.35"
 }
 
-#if os(macOS)
-extension SecCertificate {
+extension ASN1ObjectIdentifier.NameAttributes {
+    static let adpSwiftPackageMarker: ASN1ObjectIdentifier = [1, 2, 840, 113_635, 100, 6, 1, 35]
+}
+
+extension Certificate {
     var signingEntityType: SigningEntityType? {
-        guard let dict = SecCertificateCopyValues(
-            self,
-            [SigningEntityType.oid_adpSwiftPackageMarker as CFString] as CFArray,
-            nil
-        ) as? [CFString: Any] else {
-            return nil
+        // TODO: check that cert is chained to WWDR roots
+        if self.hasExtension(oid: ASN1ObjectIdentifier.NameAttributes.adpSwiftPackageMarker) {
+            return .adp
         }
-        return dict.isEmpty ? nil : .adp
+        return nil
     }
 }
-#endif

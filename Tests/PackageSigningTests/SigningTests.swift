@@ -34,10 +34,10 @@ final class SigningTests: XCTestCase {
         let matches = try await identityStore.find(by: label)
         XCTAssertTrue(!matches.isEmpty)
 
-        let info = matches[0].info
-        XCTAssertNotNil(info.commonName)
-        XCTAssertNotNil(info.organizationalUnit)
-        XCTAssertNotNil(info.organization)
+        let certificate = try matches[0].certificate()
+        XCTAssertNotNil(certificate.subject.commonName)
+        XCTAssertNotNil(certificate.subject.organizationalUnitName)
+        XCTAssertNotNil(certificate.subject.organizationName)
 
         let signatureProvider = SignatureProvider()
         let content = "per aspera ad astra".data(using: .utf8)!

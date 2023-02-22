@@ -17,6 +17,7 @@ import Security
 #endif
 
 import Basics
+import X509
 
 public struct SignatureProvider {
     public init() {}
@@ -260,7 +261,7 @@ struct CMSSignatureProvider: SignatureProviderProtocol {
             throw SigningError.signatureInvalid("Unable to extract signing certificate. Error: \(status)")
         }
 
-        return SigningEntity(certificate: certificate)
+        return try SigningEntity(certificate: certificate)
         #else
         // TODO: decode `data` by `format`, then construct `signedBy` from signing cert
         fatalError("TO BE IMPLEMENTED")

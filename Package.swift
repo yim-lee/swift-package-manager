@@ -1,4 +1,4 @@
-// swift-tools-version:5.5
+// swift-tools-version:5.7
 
 //===----------------------------------------------------------------------===//
 //
@@ -294,6 +294,7 @@ let package = Package(
             name: "PackageSigning",
             dependencies: [
                 "Basics",
+                .product(name: "X509", package: "swift-certificates"),
             ]
         ),
 
@@ -690,7 +691,7 @@ let relatedDependenciesBranch = "main"
 if ProcessInfo.processInfo.environment["SWIFTPM_LLBUILD_FWK"] == nil {
     if ProcessInfo.processInfo.environment["SWIFTCI_USE_LOCAL_DEPS"] == nil {
         package.dependencies += [
-            .package(url: "https://github.com/apple/swift-llbuild.git", .branch(relatedDependenciesBranch)),
+            .package(url: "https://github.com/apple/swift-llbuild.git", branch: relatedDependenciesBranch),
         ]
     } else {
         // In Swift CI, use a local path to llbuild to interoperate with tools
@@ -704,15 +705,16 @@ if ProcessInfo.processInfo.environment["SWIFTPM_LLBUILD_FWK"] == nil {
 
 if ProcessInfo.processInfo.environment["SWIFTCI_USE_LOCAL_DEPS"] == nil {
     package.dependencies += [
-        .package(url: "https://github.com/apple/swift-tools-support-core.git", .branch(relatedDependenciesBranch)),
+        .package(url: "https://github.com/apple/swift-tools-support-core.git", branch: relatedDependenciesBranch),
         // The 'swift-argument-parser' version declared here must match that
         // used by 'swift-driver' and 'sourcekit-lsp'. Please coordinate
         // dependency version changes here with those projects.
         .package(url: "https://github.com/apple/swift-argument-parser.git", .upToNextMinor(from: "1.2.2")),
-        .package(url: "https://github.com/apple/swift-driver.git", .branch(relatedDependenciesBranch)),
+        .package(url: "https://github.com/apple/swift-driver.git", branch: relatedDependenciesBranch),
         .package(url: "https://github.com/apple/swift-crypto.git", .upToNextMinor(from: minimumCryptoVersion)),
         .package(url: "https://github.com/apple/swift-system.git", .upToNextMinor(from: "1.1.1")),
         .package(url: "https://github.com/apple/swift-collections.git", .upToNextMinor(from: "1.0.1")),
+        .package(url: "git@github.com:apple/swift-certificates.git", branch: "cb-generate-cms-sigs"), // FIXME: update url; use version not branch
     ]
 } else {
     package.dependencies += [
@@ -722,5 +724,6 @@ if ProcessInfo.processInfo.environment["SWIFTCI_USE_LOCAL_DEPS"] == nil {
         .package(path: "../swift-crypto"),
         .package(path: "../swift-system"),
         .package(path: "../swift-collections"),
+        .package(path: "../swift-certificates"),
     ]
 }

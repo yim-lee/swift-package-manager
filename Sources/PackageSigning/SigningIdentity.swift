@@ -17,85 +17,42 @@ import Security
 #endif
 
 import Basics
+import X509
 
 public protocol SigningIdentity {
-    // TODO: change type to Certificate
-    var info: SigningIdentityInfo { get }
-}
-
-public struct SigningIdentityInfo {
-    public let commonName: String?
-    public let organizationalUnit: String?
-    public let organization: String?
-
-    init(commonName: String? = nil, organizationalUnit: String? = nil, organization: String? = nil) {
-        self.commonName = commonName
-        self.organizationalUnit = organizationalUnit
-        self.organization = organization
-    }
+    func certificate() throws -> Certificate
 }
 
 // MARK: - SecIdentity conformance to SigningIdentity
 
 #if os(macOS)
 extension SecIdentity: SigningIdentity {
-    public var info: SigningIdentityInfo {
-        var certificate: SecCertificate?
-
-        let status = SecIdentityCopyCertificate(self, &certificate)
-        guard status == errSecSuccess, let certificate = certificate else {
-            return SigningIdentityInfo()
+    public func certificate() throws -> Certificate {
+        var secCertificate: SecCertificate?
+        let status = SecIdentityCopyCertificate(self, &secCertificate)
+        guard status == errSecSuccess, let secCertificate = secCertificate else {
+            throw StringError("Failed to get certificate from SecIdentity. Error: \(status)")
         }
-
-        guard let dict = SecCertificateCopyValues(certificate, nil, nil) as? [CFString: Any],
-              let subjectDict = dict[kSecOIDX509V1SubjectName] as? [CFString: Any],
-              let propValueList = subjectDict[kSecPropertyKeyValue] as? [[String: Any]]
-        else {
-            return SigningIdentityInfo()
-        }
-
-        let props = propValueList.reduce(into: [String: String]()) { result, item in
-            if let label = item["label"] as? String, let value = item["value"] as? String {
-                result[label] = value
-            }
-        }
-
-        return SigningIdentityInfo(
-            commonName: certificate.commonName,
-            organizationalUnit: props[kSecOIDOrganizationalUnitName as String],
-            organization: props[kSecOIDOrganizationName as String]
-        )
-    }
-}
-
-extension SecCertificate {
-    var commonName: String? {
-        var commonName: CFString?
-        let status = SecCertificateCopyCommonName(self, &commonName)
-        guard status == errSecSuccess else { return nil }
-        return commonName as String?
+        return try Certificate(secCertificate)
     }
 }
 #endif
 
-// MARK: - SigningIdentity created using raw private key and certificate bytes
-
 public struct PrivateKey {}
 
-public struct Certificate {}
+// MARK: - SwiftSigningIdentity is created using raw private key and certificate bytes
 
 public struct SwiftSigningIdentity: SigningIdentity {
     public let key: PrivateKey
-    public let certificate: Certificate
-
-    public var info: SigningIdentityInfo {
-        // TODO: read from cert
-        fatalError("TO BE IMPLEMENTED")
-    }
+    let _certificate: Certificate
 
     public init(key: PrivateKey, certificate: Certificate) {
         self.key = key
-        self.certificate = certificate
+        self._certificate = certificate
+    }
+
+    public func certificate() throws -> Certificate {
+        self._certificate
     }
 }
 
