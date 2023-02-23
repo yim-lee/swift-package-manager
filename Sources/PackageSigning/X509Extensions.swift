@@ -16,14 +16,24 @@ import Foundation
 import Security
 #endif
 
+import Basics
 import SwiftASN1
 import X509
 
 #if os(macOS)
 extension Certificate {
-    init(_ secCertificate: SecCertificate) throws {
+    init(secCertificate: SecCertificate) throws {
         let data = SecCertificateCopyData(secCertificate) as Data
         self = try Certificate(derEncoded: Array(data))
+    }
+
+    init(secIdentity: SecIdentity) throws {
+        var secCertificate: SecCertificate?
+        let status = SecIdentityCopyCertificate(secIdentity, &secCertificate)
+        guard status == errSecSuccess, let secCertificate = secCertificate else {
+            throw StringError("Failed to get certificate from SecIdentity. Error: \(status)")
+        }
+        self = try Certificate(secCertificate: secCertificate)
     }
 }
 #endif

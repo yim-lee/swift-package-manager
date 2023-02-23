@@ -14,8 +14,10 @@ import Foundation
 import XCTest
 
 import Basics
-import PackageSigning
+@testable import PackageSigning
 import SPMTestSupport
+import TSCBasic
+import X509
 
 final class SigningTests: XCTestCase {
     #if swift(>=5.5.2)
@@ -34,7 +36,7 @@ final class SigningTests: XCTestCase {
         let matches = try await identityStore.find(by: label)
         XCTAssertTrue(!matches.isEmpty)
 
-        let certificate = try matches[0].certificate()
+        let certificate = try Certificate(secIdentity: matches[0] as! SecIdentity)
         XCTAssertNotNil(certificate.subject.commonName)
         XCTAssertNotNil(certificate.subject.organizationalUnitName)
         XCTAssertNotNil(certificate.subject.organizationName)
@@ -52,19 +54,42 @@ final class SigningTests: XCTestCase {
             observabilityScope: ObservabilitySystem.NOOP
         )
 
+        var verifierConfiguration = VerifierConfiguration()
+        verifierConfiguration.trustedRoots = try self.adpRoots()
+
         let status = try await signatureProvider.status(
             of: signature,
             for: content,
             in: signatureFormat,
-            verifierConfiguration: .init(),
+            verifierConfiguration: verifierConfiguration,
             observabilityScope: ObservabilitySystem.NOOP
         )
-        XCTAssertEqual(status, SignatureStatus.valid)
+        guard case .valid(let signingEntity) = status else {
+            return XCTFail("Expected signature status to be .valid but got \(status)")
+        }
 
-        let signingEntity = try SigningEntity(of: signature, signatureFormat: signatureFormat)
+        //        let signingEntity = try SigningEntity(of: signature, signatureFormat: signatureFormat)
         XCTAssertNotNil(signingEntity.name)
         XCTAssertNotNil(signingEntity.organizationalUnit)
         XCTAssertNotNil(signingEntity.organization)
     }
     #endif
+
+    private func adpRoots() throws -> [Certificate] {
+        var roots = [Certificate]()
+
+        // TODO: use fixtures for this module, not Collections
+        try fixture(name: "Collections", createGitRepo: false) { fixturePath in
+            let intermediateCAPath = fixturePath.appending(components: "Signing", "AppleWWDRCAG3.cer")
+            let intermediateCA =
+                try Certificate(derEncoded: Array(localFileSystem.readFileContents(intermediateCAPath)))
+            roots.append(intermediateCA)
+
+//            let rootCAPath = fixturePath.appending(components: "Signing", "AppleIncRoot.cer")
+//            let rootCA = try Certificate(derEncoded: Array(localFileSystem.readFileContents(rootCAPath)))
+//            roots.append(rootCA)
+        }
+
+        return roots
+    }
 }

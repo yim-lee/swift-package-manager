@@ -10,8 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-import struct Foundation.Data
-
 #if os(macOS)
 import Security
 #endif
@@ -19,23 +17,12 @@ import Security
 import Basics
 import X509
 
-public protocol SigningIdentity {
-    func certificate() throws -> Certificate
-}
+public protocol SigningIdentity {}
 
 // MARK: - SecIdentity conformance to SigningIdentity
 
 #if os(macOS)
-extension SecIdentity: SigningIdentity {
-    public func certificate() throws -> Certificate {
-        var secCertificate: SecCertificate?
-        let status = SecIdentityCopyCertificate(self, &secCertificate)
-        guard status == errSecSuccess, let secCertificate = secCertificate else {
-            throw StringError("Failed to get certificate from SecIdentity. Error: \(status)")
-        }
-        return try Certificate(secCertificate)
-    }
-}
+extension SecIdentity: SigningIdentity {}
 #endif
 
 public struct PrivateKey {}
@@ -44,15 +31,11 @@ public struct PrivateKey {}
 
 public struct SwiftSigningIdentity: SigningIdentity {
     public let key: PrivateKey
-    let _certificate: Certificate
+    public let certificate: Certificate
 
     public init(key: PrivateKey, certificate: Certificate) {
         self.key = key
-        self._certificate = certificate
-    }
-
-    public func certificate() throws -> Certificate {
-        self._certificate
+        self.certificate = certificate
     }
 }
 

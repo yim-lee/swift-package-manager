@@ -12,16 +12,12 @@
 
 import struct Foundation.Data
 
-#if os(macOS)
-import Security
-#endif
-
 import SwiftASN1
 import X509
 
 // MARK: - SigningEntity is the entity that generated the signature
 
-public struct SigningEntity {
+public struct SigningEntity: Equatable {
     public let type: SigningEntityType?
     public let name: String?
     public let organizationalUnit: String?
@@ -36,13 +32,6 @@ public struct SigningEntity {
         self = try provider.signingEntity(of: signature)
     }
 
-    // TODO: shouldn't need this
-    #if os(macOS)
-    init(certificate: SecCertificate) throws {
-        try self.init(certificate: Certificate(certificate))
-    }
-    #endif
-
     init(certificate: Certificate) {
         self.type = certificate.signingEntityType
         self.name = certificate.subject.commonName
@@ -53,7 +42,7 @@ public struct SigningEntity {
 
 // MARK: - Types of SigningEntity that SwiftPM recognizes
 
-public enum SigningEntityType {
+public enum SigningEntityType: Equatable {
     case adp // Apple Developer Program
 }
 
