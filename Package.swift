@@ -394,6 +394,7 @@ let package = Package(
                 "Build",
                 "CoreCommands",
                 "PackageGraph",
+                "PackageSigning",
                 "SourceControl",
                 "Workspace",
                 "XCBuildSupport",
