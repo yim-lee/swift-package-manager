@@ -145,20 +145,11 @@ extension SwiftPackageRegistryTool {
                     "Publishing to '\(registryURL)' requires metadata file but none was found at '\(metadataLocation.path)'."
                 )
             }
-
+            
             // step 2: generate source archive for the package release
-            swiftTool.observabilityScope.emit(info: "archiving the source at '\(packageDirectory)'")
-            let archivePath = try self.archiveSource(
-                packageIdentity: self.packageIdentity,
-                packageVersion: self.packageVersion,
-                packageDirectory: packageDirectory,
-                workingDirectory: workingDirectory,
-                cancellator: swiftTool.cancellator,
-                observabilityScope: swiftTool.observabilityScope
-            )
-
             // step 3: sign the source archive if needed
             var signature: [UInt8]? = .none
+            let archivePath: AbsolutePath
             if signingRequired {
                 // compute signing mode
                 let signingMode: PackageArchiveSigner.SigningMode
@@ -190,7 +181,34 @@ extension SwiftPackageRegistryTool {
                         "Either 'signing-identity' or 'private-key-path' (together with 'cert-chain-paths') must be provided."
                     )
                 }
-
+                
+                // step 2a: sign the manifest(s)
+                // FIXME: "look for" manifests rather than hardcoding path
+                // FIXME: sign all manifests
+                let manifestPath = packageDirectory.appending("Package.swift")
+                let signedManifestPath = workingDirectory.appending("Package.swift")
+                swiftTool.observabilityScope.emit(info: "signing the manifest at '\(manifestPath)'")
+                _ = try PackageArchiveSigner.sign(
+                    manifestPath: manifestPath,
+                    signedManifestPath: signedManifestPath,
+                    mode: signingMode,
+                    signatureFormat: self.signatureFormat,
+                    fileSystem: localFileSystem,
+                    observabilityScope: swiftTool.observabilityScope
+                )
+                
+                // step 2b: generate source archive for the package release
+                swiftTool.observabilityScope.emit(info: "archiving the source at '\(packageDirectory)'")
+                archivePath = try self.archiveSource(
+                    packageIdentity: self.packageIdentity,
+                    packageVersion: self.packageVersion,
+                    packageDirectory: packageDirectory,
+                    workingDirectory: workingDirectory,
+                    cancellator: swiftTool.cancellator,
+                    observabilityScope: swiftTool.observabilityScope
+                )
+                
+                // step 3: sign the source archive
                 swiftTool.observabilityScope.emit(info: "signing the archive at '\(archivePath)'")
                 let signaturePath = workingDirectory
                     .appending("\(self.packageIdentity)-\(self.packageVersion).sig")
@@ -200,6 +218,17 @@ extension SwiftPackageRegistryTool {
                     mode: signingMode,
                     signatureFormat: self.signatureFormat,
                     fileSystem: localFileSystem,
+                    observabilityScope: swiftTool.observabilityScope
+                )
+            } else {
+                // step 2: generate source archive for the package release
+                swiftTool.observabilityScope.emit(info: "archiving the source at '\(packageDirectory)'")
+                archivePath = try self.archiveSource(
+                    packageIdentity: self.packageIdentity,
+                    packageVersion: self.packageVersion,
+                    packageDirectory: packageDirectory,
+                    workingDirectory: workingDirectory,
+                    cancellator: swiftTool.cancellator,
                     observabilityScope: swiftTool.observabilityScope
                 )
             }

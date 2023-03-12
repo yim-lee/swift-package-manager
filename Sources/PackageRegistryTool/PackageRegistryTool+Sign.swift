@@ -117,8 +117,52 @@ public enum PackageArchiveSigner {
         fileSystem: FileSystem,
         observabilityScope: ObservabilityScope
     ) throws -> [UInt8] {
-        let archiveData = try fileSystem.readFileContents(archivePath)
+        let archive = try fileSystem.readFileContents(archivePath).contents
+        return try Self.sign(
+            content: archive,
+            signaturePath: signaturePath,
+            mode: mode,
+            signatureFormat: signatureFormat,
+            fileSystem: fileSystem,
+            observabilityScope: observabilityScope
+        )
+    }
+    
+    @discardableResult
+    public static func sign(
+        manifestPath: AbsolutePath,
+        signedManifestPath: AbsolutePath,
+        mode: SigningMode,
+        signatureFormat: SignatureFormat,
+        fileSystem: FileSystem,
+        observabilityScope: ObservabilityScope
+    ) throws -> [UInt8] {
+        var manifest = try fileSystem.readFileContents(manifestPath).contents
+        let signature = try Self.sign(
+            content: manifest,
+            signaturePath: .none,
+            mode: mode,
+            signatureFormat: signatureFormat,
+            fileSystem: fileSystem,
+            observabilityScope: observabilityScope
+        )
+        manifest.append(contentsOf: Array("\n// signature: \(signatureFormat.rawValue);\(Data(signature).base64EncodedString())".utf8))
 
+        try fileSystem.writeFileContents(signedManifestPath) { stream in
+            stream.write(manifest)
+        }
+        
+        return signature
+    }
+
+    private static func sign(
+        content: [UInt8],
+        signaturePath: AbsolutePath?,
+        mode: SigningMode,
+        signatureFormat: SignatureFormat,
+        fileSystem: FileSystem,
+        observabilityScope: ObservabilityScope
+    ) throws -> [UInt8] {
         let signingIdentity: SigningIdentity
         let intermediateCertificates: [[UInt8]]
         switch mode {
@@ -143,15 +187,17 @@ public enum PackageArchiveSigner {
         }
 
         let signature = try SignatureProvider.sign(
-            content: archiveData.contents,
+            content: content,
             identity: signingIdentity,
             intermediateCertificates: intermediateCertificates,
             format: signatureFormat,
             observabilityScope: observabilityScope
         )
 
-        try fileSystem.writeFileContents(signaturePath) { stream in
-            stream.write(signature)
+        if let signaturePath = signaturePath {
+            try fileSystem.writeFileContents(signaturePath) { stream in
+                stream.write(signature)
+            }
         }
 
         return signature

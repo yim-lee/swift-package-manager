@@ -13,6 +13,7 @@
 import Basics
 import Commands
 import Foundation
+import PackageLoading
 import PackageModel
 @testable import PackageRegistryTool
 import PackageSigning
@@ -507,6 +508,101 @@ final class PackageRegistryToolTests: CommandsTestCase {
                     "Either 'signing-identity' or 'private-key-path' (together with 'cert-chain-paths') must be provided"
                 )
             )
+        }
+    }
+    
+    @available(macOS 12, iOS 15, tvOS 15, watchOS 8, *)
+    func testManifestSigning() async throws {
+        // Only run the test if the environment in which we're running actually supports Swift concurrency (which the
+        // plugin APIs require).
+        try XCTSkipIf(
+            !UserToolchain.default.supportsSwiftConcurrency(),
+            "skipping because test environment doesn't support concurrency"
+        )
+
+        let observabilityScope = ObservabilitySystem.makeForTesting().topScope
+
+        try await withTemporaryDirectory { temporaryDirectory in
+            let manifestPath = temporaryDirectory.appending("Package.swift")
+            try localFileSystem.writeFileContents(manifestPath, string: """
+            // swift-tools-version:4.2
+            import PackageDescription
+
+            let package = Package(
+                name: "Bar",
+                products: [
+                    .library(name: "Baz", targets: ["Baz"]),
+                    .library(name: "Qux", targets: ["Qux", "Foo"]),
+                ],
+                targets: [
+                    .target(name: "Baz"),
+                    .target(name: "Qux"),
+                    .target(name: "Foo")
+                ]
+            )
+            """)
+
+            let certificatePath = temporaryDirectory.appending(component: "certificate.cer")
+            let intermediateCertificatePath = temporaryDirectory.appending(component: "intermediate.cer")
+            let privateKeyPath = temporaryDirectory.appending(component: "private-key.p8")
+
+            try fixture(name: "Signing", createGitRepo: false) { fixturePath in
+                try localFileSystem.copy(
+                    from: fixturePath.appending(components: "Certificates", "Test_ec.cer"),
+                    to: certificatePath
+                )
+                try localFileSystem.copy(
+                    from: fixturePath.appending(components: "Certificates", "Test_ec_key.p8"),
+                    to: privateKeyPath
+                )
+                try localFileSystem.copy(
+                    from: fixturePath.appending(components: "Certificates", "TestIntermediateCA.cer"),
+                    to: intermediateCertificatePath
+                )
+            }
+
+            let signatureFormat = SignatureFormat.cms_1_0_0
+            
+            // Generate signature
+            let signedManifestPath = temporaryDirectory.appending(component: "Package.swift.signed")
+            try PackageArchiveSigner.sign(
+                manifestPath: manifestPath,
+                signedManifestPath: signedManifestPath,
+                mode: .certificate(
+                    certificate: certificatePath,
+                    intermediateCertificates: [intermediateCertificatePath],
+                    privateKey: privateKeyPath
+                ),
+                signatureFormat: signatureFormat,
+                fileSystem: localFileSystem,
+                observabilityScope: observabilityScope
+            )
+
+            // Read and validate signature
+            let manifest = try localFileSystem.readFileContents(manifestPath).contents
+            guard let manifestSignature = try? ManifestSignatureParser.parse(manifestPath: signedManifestPath, fileSystem: localFileSystem) else {
+                return XCTFail("Expected manifest to be signed but it is not")
+            }
+            guard SignatureFormat(rawValue: manifestSignature.signatureFormat) == signatureFormat else {
+                return XCTFail("Expected signature format to be \(signatureFormat) but was \(manifestSignature.signatureFormat)")
+            }
+            guard manifestSignature.contents == manifest else {
+                return XCTFail("Signed manifest content does not match original")
+            }
+
+            var verifierConfiguration = VerifierConfiguration()
+            verifierConfiguration.trustedRoots = try tsc_await { self.testRoots(callback: $0) }
+
+            let signatureStatus = try await SignatureProvider.status(
+                signature: manifestSignature.signature,
+                content: manifest,
+                format: signatureFormat,
+                verifierConfiguration: verifierConfiguration,
+                observabilityScope: observabilityScope
+            )
+            guard case .valid = signatureStatus else {
+                return XCTFail("Expected signature status to be .valid but got \(signatureStatus)")
+            }
         }
     }
 
