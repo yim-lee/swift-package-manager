@@ -341,7 +341,7 @@ print("map cert chainL335: \(certChainData.count)")
                 try Certificate(derEncoded: Array($0))
             }
 print("map cert chainL339 before create policy")
-            let certPolicy = try self.getCertificatePolicy(key: certPolicyKey)
+//            let certPolicy = try self.getCertificatePolicy(key: certPolicyKey)
             
             callback(.success(certChain))
 //print("validateCertChainL336 before validate")
