@@ -203,6 +203,7 @@ public struct PackageCollectionSigning: PackageCollectionSigner, PackageCollecti
             let certChainData = try certChainPaths.map { try Data(contentsOf: $0) }
 print("signL204: \(certChainData.count)")
             // Check that the certificate is valid
+print("signL206: before validateCertChain")
             self.validateCertChain(certChainData, certPolicyKey: certPolicyKey) { result in
 print("signL207: validateCertChain result: \(result)")
                 switch result {
@@ -332,8 +333,11 @@ print("validateCertChainL329 \(certChainData.count)")
         }
 
         do {
-print("map cert chain: \(certChainData.count)")
-            let certChain = try certChainData.map { try Certificate(derEncoded: Array($0)) }
+print("map cert chainL335: \(certChainData.count)")
+            let certChain = try certChainData.map {
+                try Certificate(derEncoded: Array($0))
+            }
+print("map cert chainL339 before create policy")
             let certPolicy = try self.getCertificatePolicy(key: certPolicyKey)
 print("validateCertChainL336 before validate")
             certPolicy.validate(certChain: certChain) { result in
