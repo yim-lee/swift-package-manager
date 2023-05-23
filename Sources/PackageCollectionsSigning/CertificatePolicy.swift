@@ -198,13 +198,13 @@ print("policy init L172: after loading additionalTrustedRootCerts")
         policies.append(_CodeSigningPolicy())
         // Basic validations including expiry check
         policies.append(RFC5280Policy(validationTime: validationTime))
-//        // Must support OCSP
-//        policies.append(
-//            _OCSPVerifierPolicy(
-//                httpClient: self.httpClient,
-//                validationTime: validationTime
-//            )
-//        )
+        // Must support OCSP
+        policies.append(
+            _OCSPVerifierPolicy(
+                httpClient: self.httpClient,
+                validationTime: validationTime
+            )
+        )
 
         print("cert validate L206: \(policies.count)")
         self.verify(
@@ -438,6 +438,7 @@ struct _OCSPVerifierPolicy: VerifierPolicy {
     }
 
     mutating func chainMeetsPolicyRequirements(chain: UnverifiedCertificateChain) async -> PolicyEvaluationResult {
+print("cert validateL441: OCSP")
         // Look for cached result
         if let cached = self.cache[chain], cached.expires < .now() {
             return cached.result
