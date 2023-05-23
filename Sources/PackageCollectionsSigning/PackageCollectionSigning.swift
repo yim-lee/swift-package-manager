@@ -355,10 +355,10 @@ print("validateCertChainL338 validate result: \(result)")
                 switch result {
                 case .failure(let error):
 print("validateCertChainL341 validate error: \(error)")
-                    observabilityScope?.emit(
-                        error: "\(certPolicyKey): The certificate chain is invalid",
-                        underlyingError: error
-                    )
+//                    observabilityScope?.emit(
+//                        error: "\(certPolicyKey): The certificate chain is invalid",
+//                        underlyingError: error
+//                    )
                     if CertificatePolicyError.noTrustedRootCertsConfigured == error as? CertificatePolicyError {
                         callback(.failure(PackageCollectionSigningError.noTrustedRootCertsConfigured))
                     } else {
@@ -371,10 +371,10 @@ print("validateCertChainL352 validate success")
             }
         } catch {
 print("validateCertChainL357 error \(error)")
-            self.observabilityScope?.emit(
-                error: "An error has occurred while validating certificate chain",
-                underlyingError: error
-            )
+//            self.observabilityScope?.emit(
+//                error: "An error has occurred while validating certificate chain",
+//                underlyingError: error
+//            )
             callback(.failure(PackageCollectionSigningError.invalidCertChain))
         }
     }
