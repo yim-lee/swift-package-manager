@@ -326,7 +326,7 @@ print("someFunc result \(result)")
         }
     }
     
-    private func someFunc(callback: @escaping (Result<Void, Error>) -> Void) {
+    private func someFunc(callback: @escaping (Result<[Certificate], Error>) -> Void) {
         callback(.failure(StringError("boom")))
     }
 
