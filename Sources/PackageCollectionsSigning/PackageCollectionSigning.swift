@@ -259,7 +259,7 @@ print("signL245: error unsupported key type")
                         let signatureData = try Signature.generate(
                             payload: collection,
                             certChainData: certChainData,
-                            jsonEncoder: self.encoder,
+                            jsonEncoder: JSONEncoder.makeWithDefaults(),
                             signatureAlgorithm: signatureAlgorithm,
                             signatureProvider: signatureProvider
                         )
