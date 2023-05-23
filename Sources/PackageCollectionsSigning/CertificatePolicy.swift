@@ -183,14 +183,14 @@ struct DefaultCertificatePolicy: CertificatePolicy {
         }
 
         var policies = [VerifierPolicy]()
-//        policies.append(_ADPCertificatePolicy()) // included for testing
-//        // Check if subject name matches
-//        policies.append(
-//            _SubjectNamePolicy(
-//                expectedUserID: self.expectedSubjectUserID,
-//                expectedOrganizationalUnit: self.expectedSubjectOrganizationalUnit
-//            )
-//        )
+        policies.append(_ADPCertificatePolicy()) // included for testing
+        // Check if subject name matches
+        policies.append(
+            _SubjectNamePolicy(
+                expectedUserID: self.expectedSubjectUserID,
+                expectedOrganizationalUnit: self.expectedSubjectOrganizationalUnit
+            )
+        )
 //        // Must be a code signing certificate
 //        policies.append(_CodeSigningPolicy())
 //        // Basic validations including expiry check
@@ -203,6 +203,7 @@ struct DefaultCertificatePolicy: CertificatePolicy {
 //            )
 //        )
 
+        print("cert validate L206: \(policies.count)")
         self.verify(
             certChain: certChain,
             trustedRoots: self.trustedRoots,
@@ -488,6 +489,7 @@ struct _SubjectNamePolicy: VerifierPolicy {
     let expectedOrganizationalUnit: String?
 
     func chainMeetsPolicyRequirements(chain: UnverifiedCertificateChain) async -> PolicyEvaluationResult {
+print("cert validate L492: _SubjectNamePolicy \(self.expectedUserID) \(self.expectedOrganizationalUnit)")
         if let expectedUserID {
             let userID = chain.leaf.subject.userID
             guard userID == expectedUserID else {
@@ -518,10 +520,11 @@ struct _ADPCertificatePolicy: VerifierPolicy {
         ASN1ObjectIdentifier.NameAttributes.adpAppleDevelopmentMarkers // included for testing
 
     func chainMeetsPolicyRequirements(chain: UnverifiedCertificateChain) async -> PolicyEvaluationResult {
+        print("certificate validate L521: _ADPCertificatePolicy")
         // Not policing anything here. This policy is mainly for
         // listing marker extensions to prevent chain validation
         // from failing prematurely.
-        .meetsPolicy
+        return .meetsPolicy
     }
 }
 

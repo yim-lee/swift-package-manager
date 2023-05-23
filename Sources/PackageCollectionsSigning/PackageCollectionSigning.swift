@@ -331,6 +331,7 @@ print("signL245: error unsupported key type")
         }
 
         do {
+print("map cert chain: \(certChainData.count)")
             let certChain = try certChainData.map { try Certificate(derEncoded: Array($0)) }
             let certPolicy = try self.getCertificatePolicy(key: certPolicyKey)
 print("validateCertChainL336 before validate")
