@@ -159,14 +159,17 @@ struct DefaultCertificatePolicy: CertificatePolicy {
         observabilityScope: ObservabilityScope,
         callbackQueue: DispatchQueue
     ) {
+print("policy init L162")
         var trustedRoots = [Certificate]()
         if let trustedRootCertsDir {
             trustedRoots
                 .append(contentsOf: Self.loadCerts(at: trustedRootCertsDir, observabilityScope: observabilityScope))
         }
+print("policy init L168: after loading trustedRootCertsDir")
         if let additionalTrustedRootCerts {
             trustedRoots.append(contentsOf: additionalTrustedRootCerts)
         }
+print("policy init L172: after loading additionalTrustedRootCerts")
         self.trustedRoots = trustedRoots
         self.expectedSubjectUserID = expectedSubjectUserID
         self.expectedSubjectOrganizationalUnit = expectedSubjectOrganizationalUnit

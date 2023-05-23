@@ -326,6 +326,7 @@ print("signL245: error unsupported key type")
         certPolicyKey: CertificatePolicyKey,
         callback: @escaping (Result<[Certificate], Error>) -> Void
     ) {
+print("validateCertChainL329 \(certChainData.count)")
         guard !certChainData.isEmpty else {
             return callback(.failure(PackageCollectionSigningError.emptyCertChain))
         }
