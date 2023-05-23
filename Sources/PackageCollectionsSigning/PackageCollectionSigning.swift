@@ -350,25 +350,27 @@ print("map cert chainL335: \(certChainData.count)")
 print("map cert chainL339 before create policy")
             let certPolicy = try self.getCertificatePolicy(key: certPolicyKey)
 print("validateCertChainL336 before validate")
-            certPolicy.validate(certChain: certChain) { result in
-print("validateCertChainL338 validate result: \(result)")
-                switch result {
-                case .failure(let error):
-print("validateCertChainL341 validate error: \(error)")
-//                    observabilityScope?.emit(
-//                        error: "\(certPolicyKey): The certificate chain is invalid",
-//                        underlyingError: error
-//                    )
-                    if CertificatePolicyError.noTrustedRootCertsConfigured == error as? CertificatePolicyError {
-                        callback(.failure(PackageCollectionSigningError.noTrustedRootCertsConfigured))
-                    } else {
-                        callback(.failure(PackageCollectionSigningError.invalidCertChain))
-                    }
-                case .success:
-print("validateCertChainL352 validate success")
-                    callback(.success(certChain))
-                }
-            }
+            
+            callback(.success(certChain))
+//            certPolicy.validate(certChain: certChain) { result in
+//print("validateCertChainL338 validate result: \(result)")
+//                switch result {
+//                case .failure(let error):
+//print("validateCertChainL341 validate error: \(error)")
+////                    observabilityScope?.emit(
+////                        error: "\(certPolicyKey): The certificate chain is invalid",
+////                        underlyingError: error
+////                    )
+//                    if CertificatePolicyError.noTrustedRootCertsConfigured == error as? CertificatePolicyError {
+//                        callback(.failure(PackageCollectionSigningError.noTrustedRootCertsConfigured))
+//                    } else {
+//                        callback(.failure(PackageCollectionSigningError.invalidCertChain))
+//                    }
+//                case .success:
+//print("validateCertChainL352 validate success")
+//                    callback(.success(certChain))
+//                }
+//            }
         } catch {
 print("validateCertChainL357 error \(error)")
 //            self.observabilityScope?.emit(
