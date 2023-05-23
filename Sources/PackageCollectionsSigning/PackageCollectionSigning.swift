@@ -347,10 +347,10 @@ print("map cert chainL335: \(certChainData.count)")
 print("map cert chainL339 before create policy")
             let certPolicy = try self.getCertificatePolicy(key: certPolicyKey)
 print("validateCertChainL336 before validate")
-            
-            callback(.success(certChain))
-//            certPolicy.validate(certChain: certChain) { result in
-//print("validateCertChainL338 validate result: \(result)")
+
+            certPolicy.validate(certChain: certChain) { result in
+print("validateCertChainL338 validate result: \(result)")
+                callback(.success(certChain))
 //                switch result {
 //                case .failure(let error):
 //print("validateCertChainL341 validate error: \(error)")
@@ -367,7 +367,7 @@ print("validateCertChainL336 before validate")
 //print("validateCertChainL352 validate success")
 //                    callback(.success(certChain))
 //                }
-//            }
+            }
         } catch {
 print("validateCertChainL357 error \(error)")
 //            self.observabilityScope?.emit(
