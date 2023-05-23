@@ -211,83 +211,83 @@ print("getCertificatePolicyL162 default policy \(self.callbackQueue)")
 print("signL204: \(certChainData.count)")
             // Check that the certificate is valid
 print("signL206: before validateCertChain")
-            self.validateCertChain(certChainData, certPolicyKey: certPolicyKey) { result in
-print("validateCertChain result \(result)")
-                callback(.failure(StringError("validateCertChain error")))
-            }
 //            self.validateCertChain(certChainData, certPolicyKey: certPolicyKey) { result in
-//print("signL207: validateCertChain result: \(result)")
-//                switch result {
-//                case .failure(let error):
-//print("signL210: validateCertChain failed: \(error)")
-//                    return callback(.failure(error))
-//                case .success(let certChain):
-//print("signL210: validateCertChain success: \(certChain.count)")
-//                    do {
-//                        let privateKeyPEMString = String(decoding: privateKeyPEM, as: UTF8.self)
-//
-//                        let signatureAlgorithm: Signature.Algorithm
-//                        let signatureProvider: (Data) throws -> Data
-//                        // Determine key type
-//                        do {
-//                            let privateKey = try P256.Signing.PrivateKey(pemRepresentation: privateKeyPEMString)
-//                            signatureAlgorithm = .ES256
-//print("signL223: key type ec256")
-//                            signatureProvider = {
-//                                try privateKey.signature(for: SHA256.hash(data: $0)).rawRepresentation
-//                            }
-//                        } catch {
-//                            do {
-//                                let privateKey = try _RSA.Signing.PrivateKey(pemRepresentation: privateKeyPEMString)
-//
-//                                guard privateKey.keySizeInBits >= Self.minimumRSAKeySizeInBits else {
-//                                    throw PackageCollectionSigningError
-//                                        .invalidKeySize(minimumBits: Self.minimumRSAKeySizeInBits)
-//                                }
-//
-//                                signatureAlgorithm = .RS256
-//print("signL237: key type rsa")
-//                                signatureProvider = {
-//                                    try privateKey.signature(for: SHA256.hash(data: $0), padding: Signature.rsaSigningPadding).rawRepresentation
-//                                }
-//                            } catch let error as PackageCollectionSigningError {
-//print("signL242: error \(error)")
-//                                throw error
-//                            } catch {
-//print("signL245: error unsupported key type")
-//                                throw PackageCollectionSigningError.unsupportedKeyType
-//                            }
-//                        }
-//
-//                        // Generate signature
-//                        let signatureData = try Signature.generate(
-//                            payload: collection,
-//                            certChainData: certChainData,
-//                            jsonEncoder: self.encoder,
-//                            signatureAlgorithm: signatureAlgorithm,
-//                            signatureProvider: signatureProvider
-//                        )
-//
-//                        guard let signature = String(bytes: signatureData, encoding: .utf8) else {
-//                            throw PackageCollectionSigningError.invalidSignature
-//                        }
-//
-//                        let certificate = certChain.first! // !-safe because certChain cannot be empty at this point
-//                        let collectionSignature = Model.Signature(
-//                            signature: signature,
-//                            certificate: Model.Signature.Certificate(
-//                                subject: Model.Signature.Certificate.Name(from: certificate.subject),
-//                                issuer: Model.Signature.Certificate.Name(from: certificate.issuer)
-//                            )
-//                        )
-//                        callback(.success(
-//                            Model.SignedCollection(collection: collection, signature: collectionSignature)
-//                        ))
-//                    } catch {
-//                        callback(.failure(error))
-//                    }
-//                }
+//print("validateCertChain result \(result)")
+//                callback(.failure(StringError("validateCertChain error")))
 //            }
+            self.validateCertChain(certChainData, certPolicyKey: certPolicyKey) { result in
+print("signL207: validateCertChain result: \(result)")
+                switch result {
+                case .failure(let error):
+print("signL210: validateCertChain failed: \(error)")
+                    return callback(.failure(error))
+                case .success(let certChain):
+print("signL210: validateCertChain success: \(certChain.count)")
+                    do {
+                        let privateKeyPEMString = String(decoding: privateKeyPEM, as: UTF8.self)
+
+                        let signatureAlgorithm: Signature.Algorithm
+                        let signatureProvider: (Data) throws -> Data
+                        // Determine key type
+                        do {
+                            let privateKey = try P256.Signing.PrivateKey(pemRepresentation: privateKeyPEMString)
+                            signatureAlgorithm = .ES256
+print("signL223: key type ec256")
+                            signatureProvider = {
+                                try privateKey.signature(for: SHA256.hash(data: $0)).rawRepresentation
+                            }
+                        } catch {
+                            do {
+                                let privateKey = try _RSA.Signing.PrivateKey(pemRepresentation: privateKeyPEMString)
+
+                                guard privateKey.keySizeInBits >= Self.minimumRSAKeySizeInBits else {
+                                    throw PackageCollectionSigningError
+                                        .invalidKeySize(minimumBits: Self.minimumRSAKeySizeInBits)
+                                }
+
+                                signatureAlgorithm = .RS256
+print("signL237: key type rsa")
+                                signatureProvider = {
+                                    try privateKey.signature(for: SHA256.hash(data: $0), padding: Signature.rsaSigningPadding).rawRepresentation
+                                }
+                            } catch let error as PackageCollectionSigningError {
+print("signL242: error \(error)")
+                                throw error
+                            } catch {
+print("signL245: error unsupported key type")
+                                throw PackageCollectionSigningError.unsupportedKeyType
+                            }
+                        }
+
+                        // Generate signature
+                        let signatureData = try Signature.generate(
+                            payload: collection,
+                            certChainData: certChainData,
+                            jsonEncoder: self.encoder,
+                            signatureAlgorithm: signatureAlgorithm,
+                            signatureProvider: signatureProvider
+                        )
+
+                        guard let signature = String(bytes: signatureData, encoding: .utf8) else {
+                            throw PackageCollectionSigningError.invalidSignature
+                        }
+
+                        let certificate = certChain.first! // !-safe because certChain cannot be empty at this point
+                        let collectionSignature = Model.Signature(
+                            signature: signature,
+                            certificate: Model.Signature.Certificate(
+                                subject: Model.Signature.Certificate.Name(from: certificate.subject),
+                                issuer: Model.Signature.Certificate.Name(from: certificate.issuer)
+                            )
+                        )
+                        callback(.success(
+                            Model.SignedCollection(collection: collection, signature: collectionSignature)
+                        ))
+                    } catch {
+                        callback(.failure(error))
+                    }
+                }
+            }
         } catch {
             callback(.failure(error))
         }
@@ -349,28 +349,26 @@ print("map cert chainL335: \(certChainData.count)")
             }
 print("map cert chainL339 before create policy")
             let certPolicy = try self.getCertificatePolicy(key: certPolicyKey)
-            
-            callback(.success(certChain))
-//print("validateCertChainL336 before validate")
-//            certPolicy.validate(certChain: certChain) { result in
-//print("validateCertChainL338 validate result: \(result)")
-//                switch result {
-//                case .failure(let error):
-//print("validateCertChainL341 validate error: \(error)")
-//                    observabilityScope.emit(
-//                        error: "\(certPolicyKey): The certificate chain is invalid",
-//                        underlyingError: error
-//                    )
-//                    if CertificatePolicyError.noTrustedRootCertsConfigured == error as? CertificatePolicyError {
-//                        callback(.failure(PackageCollectionSigningError.noTrustedRootCertsConfigured))
-//                    } else {
-//                        callback(.failure(PackageCollectionSigningError.invalidCertChain))
-//                    }
-//                case .success:
-//print("validateCertChainL352 validate success")
-//                    callback(.success(certChain))
-//                }
-//            }
+print("validateCertChainL336 before validate")
+            certPolicy.validate(certChain: certChain) { result in
+print("validateCertChainL338 validate result: \(result)")
+                switch result {
+                case .failure(let error):
+print("validateCertChainL341 validate error: \(error)")
+                    observabilityScope.emit(
+                        error: "\(certPolicyKey): The certificate chain is invalid",
+                        underlyingError: error
+                    )
+                    if CertificatePolicyError.noTrustedRootCertsConfigured == error as? CertificatePolicyError {
+                        callback(.failure(PackageCollectionSigningError.noTrustedRootCertsConfigured))
+                    } else {
+                        callback(.failure(PackageCollectionSigningError.invalidCertChain))
+                    }
+                case .success:
+print("validateCertChainL352 validate success")
+                    callback(.success(certChain))
+                }
+            }
         } catch {
 print("validateCertChainL357 error \(error)")
             self.observabilityScope.emit(
