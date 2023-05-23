@@ -201,12 +201,16 @@ public struct PackageCollectionSigning: PackageCollectionSigner, PackageCollecti
     ) {
         do {
             let certChainData = try certChainPaths.map { try Data(contentsOf: $0) }
+print("signL204: \(certChainData.count)")
             // Check that the certificate is valid
             self.validateCertChain(certChainData, certPolicyKey: certPolicyKey) { result in
+print("signL207: validateCertChain result: \(result)")
                 switch result {
                 case .failure(let error):
+print("signL210: validateCertChain failed: \(error)")
                     return callback(.failure(error))
                 case .success(let certChain):
+print("signL210: validateCertChain success: \(certChain.count)")
                     do {
                         let privateKeyPEMString = String(decoding: privateKeyPEM, as: UTF8.self)
 
@@ -216,6 +220,7 @@ public struct PackageCollectionSigning: PackageCollectionSigner, PackageCollecti
                         do {
                             let privateKey = try P256.Signing.PrivateKey(pemRepresentation: privateKeyPEMString)
                             signatureAlgorithm = .ES256
+print("signL223: key type ec256")
                             signatureProvider = {
                                 try privateKey.signature(for: SHA256.hash(data: $0)).rawRepresentation
                             }
@@ -229,12 +234,15 @@ public struct PackageCollectionSigning: PackageCollectionSigner, PackageCollecti
                                 }
 
                                 signatureAlgorithm = .RS256
+print("signL237: key type rsa")
                                 signatureProvider = {
                                     try privateKey.signature(for: SHA256.hash(data: $0), padding: Signature.rsaSigningPadding).rawRepresentation
                                 }
                             } catch let error as PackageCollectionSigningError {
+print("signL242: error \(error)")
                                 throw error
                             } catch {
+print("signL245: error unsupported key type")
                                 throw PackageCollectionSigningError.unsupportedKeyType
                             }
                         }
