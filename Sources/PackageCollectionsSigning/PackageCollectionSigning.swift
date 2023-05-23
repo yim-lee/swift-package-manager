@@ -156,6 +156,10 @@ print("getCertificatePolicyL155 \(key)")
         switch key {
         case .`default`(let subjectUserID, let subjectOrganizationalUnit):
 print("getCertificatePolicyL158 default policy \(subjectUserID) \(subjectOrganizationalUnit)")
+print("getCertificatePolicyL159 default policy \(self.trustedRootCertsDir)")
+print("getCertificatePolicyL160 default policy \(self.additionalTrustedRootCerts)")
+print("getCertificatePolicyL161 default policy \(self.observabilityScope)")
+print("getCertificatePolicyL162 default policy \(self.callbackQueue)")
             // Create new instance each time since contents of trustedRootCertsDir might change
             return DefaultCertificatePolicy(
                 trustedRootCertsDir: self.trustedRootCertsDir,
