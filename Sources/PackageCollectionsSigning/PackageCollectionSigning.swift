@@ -205,8 +205,8 @@ print("signL204: \(certChainData.count)")
             // Check that the certificate is valid
 print("signL206: before validateCertChain")
             self.validateCertChain(certChainData, certPolicyKey: certPolicyKey) { result in
-print("someFunc result \(result)")
-                callback(.failure(StringError("someFunc error")))
+print("validateCertChain result \(result)")
+                callback(.failure(StringError("validateCertChain error")))
             }
 //            self.validateCertChain(certChainData, certPolicyKey: certPolicyKey) { result in
 //print("signL207: validateCertChain result: \(result)")
@@ -325,26 +325,17 @@ print("someFunc result \(result)")
             }
         }
     }
-    
-    private func someFunc(
-        _ certChainData: [Data],
-        certPolicyKey: CertificatePolicyKey,
-        callback: @escaping (Result<[Certificate], Error>) -> Void
-    ) {
-        callback(.failure(StringError("boom")))
-    }
 
     private func validateCertChain(
         _ certChainData: [Data],
         certPolicyKey: CertificatePolicyKey,
         callback: @escaping (Result<[Certificate], Error>) -> Void
     ) {
-        callback(.failure(StringError("boom")))
-//print("validateCertChainL329 \(certChainData.count)")
-//        guard !certChainData.isEmpty else {
-//            return callback(.failure(PackageCollectionSigningError.emptyCertChain))
-//        }
-//
+print("validateCertChainL329 \(certChainData.count)")
+        guard !certChainData.isEmpty else {
+            return callback(.failure(PackageCollectionSigningError.emptyCertChain))
+        }
+callback(.failure(StringError("boom")))
 //        do {
 //print("map cert chainL335: \(certChainData.count)")
 //            let certChain = try certChainData.map {
