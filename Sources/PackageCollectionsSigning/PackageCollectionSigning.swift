@@ -148,17 +148,18 @@ public struct PackageCollectionSigning: PackageCollectionSigner, PackageCollecti
         self.certPolicies = [CertificatePolicyKey.custom: certPolicy]
         self.encoder = JSONEncoder.makeWithDefaults()
         self.decoder = JSONDecoder.makeWithDefaults()
-        self.observabilityScope = ObservabilitySystem { _, diagnostic in print(diagnostic) }.topScope
+        self.observabilityScope = observabilityScope
     }
 
     private func getCertificatePolicy(key: CertificatePolicyKey) throws -> CertificatePolicy {
 print("getCertificatePolicyL155 \(key)")
         switch key {
         case .`default`(let subjectUserID, let subjectOrganizationalUnit):
+            let observabilityScope = ObservabilitySystem { _, _ in }.topScope
 print("getCertificatePolicyL158 default policy \(subjectUserID) \(subjectOrganizationalUnit)")
 print("getCertificatePolicyL159 default policy \(self.trustedRootCertsDir)")
 print("getCertificatePolicyL160 default policy \(self.additionalTrustedRootCerts)")
-print("getCertificatePolicyL161 default policy \(self.observabilityScope)")
+print("getCertificatePolicyL161 default policy \(observabilityScope)")
 print("getCertificatePolicyL162 default policy \(self.callbackQueue)")
             // Create new instance each time since contents of trustedRootCertsDir might change
             return DefaultCertificatePolicy(
@@ -166,7 +167,7 @@ print("getCertificatePolicyL162 default policy \(self.callbackQueue)")
                 additionalTrustedRootCerts: self.additionalTrustedRootCerts,
                 expectedSubjectUserID: subjectUserID,
                 expectedSubjectOrganizationalUnit: subjectOrganizationalUnit,
-                observabilityScope: self.observabilityScope,
+                observabilityScope: observabilityScope,
                 callbackQueue: self.callbackQueue
             )
         case .appleSwiftPackageCollection(let subjectUserID, let subjectOrganizationalUnit):
