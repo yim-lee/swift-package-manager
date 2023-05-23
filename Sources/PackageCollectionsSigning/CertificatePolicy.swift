@@ -110,7 +110,7 @@ extension CertificatePolicy {
             case .validCertificate:
                 wrappedCallback(.success(()))
             case .couldNotValidate(let failures):
-                observabilityScope?.emit(error: "Failed to validate certificate chain \(certChain): \(failures)")
+//                observabilityScope?.emit(error: "Failed to validate certificate chain \(certChain): \(failures)")
                 wrappedCallback(.failure(CertificatePolicyError.invalidCertChain))
             }
         }
@@ -175,7 +175,7 @@ print("policy init L172: after loading additionalTrustedRootCerts")
         self.expectedSubjectOrganizationalUnit = expectedSubjectOrganizationalUnit
         self.callbackQueue = callbackQueue
         self.httpClient = HTTPClient.makeDefault()
-        self.observabilityScope = observabilityScope
+        self.observabilityScope = nil
     }
 
     func validate(certChain: [Certificate], validationTime: Date, callback: @escaping (Result<Void, Error>) -> Void) {
@@ -211,7 +211,7 @@ print("policy init L172: after loading additionalTrustedRootCerts")
             certChain: certChain,
             trustedRoots: self.trustedRoots,
             policies: policies,
-            observabilityScope: self.observabilityScope,
+            observabilityScope: nil,
             callbackQueue: self.callbackQueue,
             callback: callback
         )
@@ -263,7 +263,7 @@ struct ADPSwiftPackageCollectionCertificatePolicy: CertificatePolicy {
         self.expectedSubjectOrganizationalUnit = expectedSubjectOrganizationalUnit
         self.callbackQueue = callbackQueue
         self.httpClient = HTTPClient.makeDefault()
-        self.observabilityScope = observabilityScope
+        self.observabilityScope = nil
     }
 
     func validate(certChain: [Certificate], validationTime: Date, callback: @escaping (Result<Void, Error>) -> Void) {
@@ -300,7 +300,7 @@ struct ADPSwiftPackageCollectionCertificatePolicy: CertificatePolicy {
             certChain: certChain,
             trustedRoots: self.trustedRoots,
             policies: policies,
-            observabilityScope: self.observabilityScope,
+            observabilityScope: nil,
             callbackQueue: self.callbackQueue,
             callback: callback
         )
@@ -352,7 +352,7 @@ struct ADPAppleDistributionCertificatePolicy: CertificatePolicy {
         self.expectedSubjectOrganizationalUnit = expectedSubjectOrganizationalUnit
         self.callbackQueue = callbackQueue
         self.httpClient = HTTPClient.makeDefault()
-        self.observabilityScope = observabilityScope
+        self.observabilityScope = nil
     }
 
     func validate(certChain: [Certificate], validationTime: Date, callback: @escaping (Result<Void, Error>) -> Void) {
@@ -389,7 +389,7 @@ struct ADPAppleDistributionCertificatePolicy: CertificatePolicy {
             certChain: certChain,
             trustedRoots: self.trustedRoots,
             policies: policies,
-            observabilityScope: self.observabilityScope,
+            observabilityScope: nil,
             callbackQueue: self.callbackQueue,
             callback: callback
         )
@@ -634,10 +634,10 @@ extension CertificatePolicy {
                     let certData = try Data(contentsOf: fileURL)
                     certs.append(try Certificate(derEncoded: Array(certData)))
                 } catch {
-                    observabilityScope?.emit(
-                        warning: "The certificate \(fileURL) is invalid",
-                        underlyingError: error
-                    )
+//                    observabilityScope?.emit(
+//                        warning: "The certificate \(fileURL) is invalid",
+//                        underlyingError: error
+//                    )
                 }
             }
         }
