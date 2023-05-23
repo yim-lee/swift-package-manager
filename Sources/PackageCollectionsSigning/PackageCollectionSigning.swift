@@ -148,7 +148,7 @@ public struct PackageCollectionSigning: PackageCollectionSigner, PackageCollecti
         self.certPolicies = [CertificatePolicyKey.custom: certPolicy]
         self.encoder = JSONEncoder.makeWithDefaults()
         self.decoder = JSONDecoder.makeWithDefaults()
-        self.observabilityScope = observabilityScope
+        self.observabilityScope = ObservabilitySystem { _, diagnostic in print(diagnostic) }.topScope
     }
 
     private func getCertificatePolicy(key: CertificatePolicyKey) throws -> CertificatePolicy {
