@@ -335,14 +335,15 @@ print("validateCertChainL329 \(certChainData.count)")
         guard !certChainData.isEmpty else {
             return callback(.failure(PackageCollectionSigningError.emptyCertChain))
         }
-callback(.failure(StringError("boom")))
-//        do {
-//print("map cert chainL335: \(certChainData.count)")
-//            let certChain = try certChainData.map {
-//                try Certificate(derEncoded: Array($0))
-//            }
-//print("map cert chainL339 before create policy")
-//            let certPolicy = try self.getCertificatePolicy(key: certPolicyKey)
+        do {
+print("map cert chainL335: \(certChainData.count)")
+            let certChain = try certChainData.map {
+                try Certificate(derEncoded: Array($0))
+            }
+print("map cert chainL339 before create policy")
+            let certPolicy = try self.getCertificatePolicy(key: certPolicyKey)
+            
+            callback(.success(certChain))
 //print("validateCertChainL336 before validate")
 //            certPolicy.validate(certChain: certChain) { result in
 //print("validateCertChainL338 validate result: \(result)")
@@ -363,14 +364,14 @@ callback(.failure(StringError("boom")))
 //                    callback(.success(certChain))
 //                }
 //            }
-//        } catch {
-//print("validateCertChainL357 error \(error)")
-//            self.observabilityScope.emit(
-//                error: "An error has occurred while validating certificate chain",
-//                underlyingError: error
-//            )
-//            callback(.failure(PackageCollectionSigningError.invalidCertChain))
-//        }
+        } catch {
+print("validateCertChainL357 error \(error)")
+            self.observabilityScope.emit(
+                error: "An error has occurred while validating certificate chain",
+                underlyingError: error
+            )
+            callback(.failure(PackageCollectionSigningError.invalidCertChain))
+        }
     }
 }
 
