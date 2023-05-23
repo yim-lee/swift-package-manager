@@ -167,7 +167,7 @@ print("getCertificatePolicyL162 default policy \(self.callbackQueue)")
                 additionalTrustedRootCerts: self.additionalTrustedRootCerts,
                 expectedSubjectUserID: subjectUserID,
                 expectedSubjectOrganizationalUnit: subjectOrganizationalUnit,
-                observabilityScope: observabilityScope,
+                observabilityScope: nil,
                 callbackQueue: self.callbackQueue
             )
         case .appleSwiftPackageCollection(let subjectUserID, let subjectOrganizationalUnit):
