@@ -136,7 +136,7 @@ public struct PackageCollectionSigning: PackageCollectionSigner, PackageCollecti
         self.certPolicies = [:]
         self.encoder = JSONEncoder.makeWithDefaults()
         self.decoder = JSONDecoder.makeWithDefaults()
-        self.observabilityScope = observabilityScope
+        self.observabilityScope = nil
     }
 
     init(certPolicy: CertificatePolicy, observabilityScope: ObservabilityScope, callbackQueue: DispatchQueue) {
