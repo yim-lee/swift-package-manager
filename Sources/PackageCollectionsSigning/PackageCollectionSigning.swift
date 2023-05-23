@@ -368,7 +368,7 @@ print("signL245: error unsupported key type")
 //            )
 //            callback(.failure(PackageCollectionSigningError.invalidCertChain))
 //        }
-//    }
+    }
 }
 
 public enum PackageCollectionSigningError: Error, Equatable {
