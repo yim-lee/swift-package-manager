@@ -204,7 +204,10 @@ public struct PackageCollectionSigning: PackageCollectionSigner, PackageCollecti
 print("signL204: \(certChainData.count)")
             // Check that the certificate is valid
 print("signL206: before validateCertChain")
-            throw StringError("boom boom")
+            self.someFunc { result in
+print("someFunc result \(result)")
+                callback(.failure(StringError("someFunc error")))
+            }
 //            self.validateCertChain(certChainData, certPolicyKey: certPolicyKey) { result in
 //print("signL207: validateCertChain result: \(result)")
 //                switch result {
@@ -321,6 +324,10 @@ print("signL206: before validateCertChain")
                 callback(.success(()))
             }
         }
+    }
+    
+    private func someFunc(callback: @escaping (Result<Void, Error>) -> Void) {
+        callback(.failure(StringError("boom")))
     }
 
     private func validateCertChain(
