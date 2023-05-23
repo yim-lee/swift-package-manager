@@ -254,32 +254,31 @@ print("signL245: error unsupported key type")
                                 throw PackageCollectionSigningError.unsupportedKeyType
                             }
                         }
-                        callback(.failure(StringError("boom")))
 
                         // Generate signature
-//                        let signatureData = try Signature.generate(
-//                            payload: collection,
-//                            certChainData: certChainData,
-//                            jsonEncoder: self.encoder,
-//                            signatureAlgorithm: signatureAlgorithm,
-//                            signatureProvider: signatureProvider
-//                        )
-//
-//                        guard let signature = String(bytes: signatureData, encoding: .utf8) else {
-//                            throw PackageCollectionSigningError.invalidSignature
-//                        }
-//
-//                        let certificate = certChain.first! // !-safe because certChain cannot be empty at this point
-//                        let collectionSignature = Model.Signature(
-//                            signature: signature,
-//                            certificate: Model.Signature.Certificate(
-//                                subject: Model.Signature.Certificate.Name(from: certificate.subject),
-//                                issuer: Model.Signature.Certificate.Name(from: certificate.issuer)
-//                            )
-//                        )
-//                        callback(.success(
-//                            Model.SignedCollection(collection: collection, signature: collectionSignature)
-//                        ))
+                        let signatureData = try Signature.generate(
+                            payload: collection,
+                            certChainData: certChainData,
+                            jsonEncoder: self.encoder,
+                            signatureAlgorithm: signatureAlgorithm,
+                            signatureProvider: signatureProvider
+                        )
+
+                        guard let signature = String(bytes: signatureData, encoding: .utf8) else {
+                            throw PackageCollectionSigningError.invalidSignature
+                        }
+
+                        let certificate = certChain.first! // !-safe because certChain cannot be empty at this point
+                        let collectionSignature = Model.Signature(
+                            signature: signature,
+                            certificate: Model.Signature.Certificate(
+                                subject: Model.Signature.Certificate.Name(from: certificate.subject),
+                                issuer: Model.Signature.Certificate.Name(from: certificate.issuer)
+                            )
+                        )
+                        callback(.success(
+                            Model.SignedCollection(collection: collection, signature: collectionSignature)
+                        ))
                     } catch {
                         callback(.failure(error))
                     }
