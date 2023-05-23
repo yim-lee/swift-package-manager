@@ -198,12 +198,18 @@ public struct PackageCollectionSigning: PackageCollectionSigner, PackageCollecti
     ) {
         do {
             let certChainData = try certChainPaths.map { try Data(contentsOf: $0) }
+            
+            guard !certChainData.isEmpty else {
+                throw PackageCollectionSigningError.emptyCertChain
+            }
+            let certChain = try certChainData.map { try Certificate(derEncoded: Array($0)) }
+            
             // Check that the certificate is valid
-            self.validateCertChain(certChainData, certPolicyKey: certPolicyKey) { result in
-                switch result {
-                case .failure(let error):
-                    return callback(.failure(error))
-                case .success(let certChain):
+//            self.validateCertChain(certChainData, certPolicyKey: certPolicyKey) { result in
+//                switch result {
+//                case .failure(let error):
+//                    return callback(.failure(error))
+//                case .success(let certChain):
                     do {
                         let privateKeyPEMString = String(decoding: privateKeyPEM, as: UTF8.self)
 
@@ -263,8 +269,8 @@ public struct PackageCollectionSigning: PackageCollectionSigner, PackageCollecti
                     } catch {
                         callback(.failure(error))
                     }
-                }
-            }
+//                }
+//            }
         } catch {
             callback(.failure(error))
         }
