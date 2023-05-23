@@ -155,7 +155,7 @@ public struct PackageCollectionSigning: PackageCollectionSigner, PackageCollecti
 print("getCertificatePolicyL155 \(key)")
         switch key {
         case .`default`(let subjectUserID, let subjectOrganizationalUnit):
-print("getCertificatePolicyL158 default policy")
+print("getCertificatePolicyL158 default policy \(subjectUserID) \(subjectOrganizationalUnit)")
             // Create new instance each time since contents of trustedRootCertsDir might change
             return DefaultCertificatePolicy(
                 trustedRootCertsDir: self.trustedRootCertsDir,
