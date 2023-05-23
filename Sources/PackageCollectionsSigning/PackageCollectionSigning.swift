@@ -107,24 +107,24 @@ public struct PackageCollectionSigning: PackageCollectionSigner, PackageCollecti
     private let encoder: JSONEncoder
     private let decoder: JSONDecoder
 
-    private let observabilityScope: ObservabilityScope
+    private let observabilityScope: ObservabilityScope?
 
     public init(
         trustedRootCertsDir: URL? = nil,
         additionalTrustedRootCerts: [String]? = nil,
-        observabilityScope: ObservabilityScope,
+        observabilityScope: ObservabilityScope?,
         callbackQueue: DispatchQueue
     ) {
         self.trustedRootCertsDir = trustedRootCertsDir
         self.additionalTrustedRootCerts = additionalTrustedRootCerts.map { $0.compactMap {
             guard let data = Data(base64Encoded: $0) else {
-                observabilityScope.emit(error: "The certificate \($0) is not in valid base64 encoding")
+                observabilityScope?.emit(error: "The certificate \($0) is not in valid base64 encoding")
                 return nil
             }
             do {
                 return try Certificate(derEncoded: Array(data))
             } catch {
-                observabilityScope.emit(
+                observabilityScope?.emit(
                     error: "The certificate \($0) is not in valid DER format",
                     underlyingError: error
                 )
@@ -355,7 +355,7 @@ print("validateCertChainL338 validate result: \(result)")
                 switch result {
                 case .failure(let error):
 print("validateCertChainL341 validate error: \(error)")
-                    observabilityScope.emit(
+                    observabilityScope?.emit(
                         error: "\(certPolicyKey): The certificate chain is invalid",
                         underlyingError: error
                     )
@@ -371,7 +371,7 @@ print("validateCertChainL352 validate success")
             }
         } catch {
 print("validateCertChainL357 error \(error)")
-            self.observabilityScope.emit(
+            self.observabilityScope?.emit(
                 error: "An error has occurred while validating certificate chain",
                 underlyingError: error
             )

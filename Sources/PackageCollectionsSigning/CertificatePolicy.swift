@@ -78,7 +78,7 @@ extension CertificatePolicy {
         certChain: [Certificate],
         trustedRoots: [Certificate]?,
         policies: [VerifierPolicy],
-        observabilityScope: ObservabilityScope,
+        observabilityScope: ObservabilityScope?,
         callbackQueue: DispatchQueue,
         callback: @escaping (Result<Void, Error>) -> Void
     ) {
@@ -110,7 +110,7 @@ extension CertificatePolicy {
             case .validCertificate:
                 wrappedCallback(.success(()))
             case .couldNotValidate(let failures):
-                observabilityScope.emit(error: "Failed to validate certificate chain \(certChain): \(failures)")
+                observabilityScope?.emit(error: "Failed to validate certificate chain \(certChain): \(failures)")
                 wrappedCallback(.failure(CertificatePolicyError.invalidCertChain))
             }
         }
@@ -138,7 +138,7 @@ struct DefaultCertificatePolicy: CertificatePolicy {
 
     private let callbackQueue: DispatchQueue
     private let httpClient: HTTPClient
-    private let observabilityScope: ObservabilityScope
+    private let observabilityScope: ObservabilityScope?
 
     /// Initializes a `DefaultCertificatePolicy`.
     ///
@@ -156,7 +156,7 @@ struct DefaultCertificatePolicy: CertificatePolicy {
         additionalTrustedRootCerts: [Certificate]?,
         expectedSubjectUserID: String? = nil,
         expectedSubjectOrganizationalUnit: String? = nil,
-        observabilityScope: ObservabilityScope,
+        observabilityScope: ObservabilityScope?,
         callbackQueue: DispatchQueue
     ) {
 print("policy init L162")
@@ -229,7 +229,7 @@ struct ADPSwiftPackageCollectionCertificatePolicy: CertificatePolicy {
 
     private let callbackQueue: DispatchQueue
     private let httpClient: HTTPClient
-    private let observabilityScope: ObservabilityScope
+    private let observabilityScope: ObservabilityScope?
 
     /// Initializes a `ADPSwiftPackageCollectionCertificatePolicy`.
     ///
@@ -247,7 +247,7 @@ struct ADPSwiftPackageCollectionCertificatePolicy: CertificatePolicy {
         additionalTrustedRootCerts: [Certificate]?,
         expectedSubjectUserID: String? = nil,
         expectedSubjectOrganizationalUnit: String? = nil,
-        observabilityScope: ObservabilityScope,
+        observabilityScope: ObservabilityScope?,
         callbackQueue: DispatchQueue
     ) {
         var trustedRoots = [Certificate]()
@@ -318,7 +318,7 @@ struct ADPAppleDistributionCertificatePolicy: CertificatePolicy {
 
     private let callbackQueue: DispatchQueue
     private let httpClient: HTTPClient
-    private let observabilityScope: ObservabilityScope
+    private let observabilityScope: ObservabilityScope?
 
     /// Initializes a `ADPAppleDistributionCertificatePolicy`.
     ///
@@ -336,7 +336,7 @@ struct ADPAppleDistributionCertificatePolicy: CertificatePolicy {
         additionalTrustedRootCerts: [Certificate]?,
         expectedSubjectUserID: String? = nil,
         expectedSubjectOrganizationalUnit: String? = nil,
-        observabilityScope: ObservabilityScope,
+        observabilityScope: ObservabilityScope?,
         callbackQueue: DispatchQueue
     ) {
         var trustedRoots = [Certificate]()
@@ -626,7 +626,7 @@ enum CertificateStores {
 // MARK: - Utils
 
 extension CertificatePolicy {
-    fileprivate static func loadCerts(at directory: URL, observabilityScope: ObservabilityScope) -> [Certificate] {
+    fileprivate static func loadCerts(at directory: URL, observabilityScope: ObservabilityScope?) -> [Certificate] {
         var certs = [Certificate]()
         if let enumerator = FileManager.default.enumerator(at: directory, includingPropertiesForKeys: nil) {
             for case let fileURL as URL in enumerator {
@@ -634,7 +634,7 @@ extension CertificatePolicy {
                     let certData = try Data(contentsOf: fileURL)
                     certs.append(try Certificate(derEncoded: Array(certData)))
                 } catch {
-                    observabilityScope.emit(
+                    observabilityScope?.emit(
                         warning: "The certificate \(fileURL) is invalid",
                         underlyingError: error
                     )
