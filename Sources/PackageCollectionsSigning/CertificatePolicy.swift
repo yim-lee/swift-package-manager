@@ -194,10 +194,10 @@ print("policy init L172: after loading additionalTrustedRootCerts")
                 expectedOrganizationalUnit: self.expectedSubjectOrganizationalUnit
             )
         )
-//        // Must be a code signing certificate
-//        policies.append(_CodeSigningPolicy())
-//        // Basic validations including expiry check
-//        policies.append(RFC5280Policy(validationTime: validationTime))
+        // Must be a code signing certificate
+        policies.append(_CodeSigningPolicy())
+        // Basic validations including expiry check
+        policies.append(RFC5280Policy(validationTime: validationTime))
 //        // Must support OCSP
 //        policies.append(
 //            _OCSPVerifierPolicy(
@@ -406,6 +406,7 @@ struct _CodeSigningPolicy: VerifierPolicy {
     ]
 
     func chainMeetsPolicyRequirements(chain: UnverifiedCertificateChain) async -> PolicyEvaluationResult {
+print("cert validateL409: code signing")
         let isCodeSigning = (
             try? chain.leaf.extensions.extendedKeyUsage?.contains(ExtendedKeyUsage.Usage.codeSigning)
         ) ?? false
