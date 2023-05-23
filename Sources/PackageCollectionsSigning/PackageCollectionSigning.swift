@@ -204,7 +204,7 @@ public struct PackageCollectionSigning: PackageCollectionSigner, PackageCollecti
 print("signL204: \(certChainData.count)")
             // Check that the certificate is valid
 print("signL206: before validateCertChain")
-            self.someFunc { result in
+            self.someFunc([], certPolicyKey: certPolicyKey) { result in
 print("someFunc result \(result)")
                 callback(.failure(StringError("someFunc error")))
             }
@@ -326,7 +326,11 @@ print("someFunc result \(result)")
         }
     }
     
-    private func someFunc(callback: @escaping (Result<[Certificate], Error>) -> Void) {
+    private func someFunc(
+        _ certChainData: [Data],
+        certPolicyKey: CertificatePolicyKey,
+        callback: @escaping (Result<[Certificate], Error>) -> Void
+    ) {
         callback(.failure(StringError("boom")))
     }
 
