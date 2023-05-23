@@ -333,9 +333,12 @@ print("signL245: error unsupported key type")
         do {
             let certChain = try certChainData.map { try Certificate(derEncoded: Array($0)) }
             let certPolicy = try self.getCertificatePolicy(key: certPolicyKey)
+print("validateCertChainL336 before validate")
             certPolicy.validate(certChain: certChain) { result in
+print("validateCertChainL338 validate result: \(result)")
                 switch result {
                 case .failure(let error):
+print("validateCertChainL341 validate error: \(error)")
                     observabilityScope.emit(
                         error: "\(certPolicyKey): The certificate chain is invalid",
                         underlyingError: error
@@ -346,10 +349,12 @@ print("signL245: error unsupported key type")
                         callback(.failure(PackageCollectionSigningError.invalidCertChain))
                     }
                 case .success:
+print("validateCertChainL352 validate success")
                     callback(.success(certChain))
                 }
             }
         } catch {
+print("validateCertChainL357 error \(error)")
             self.observabilityScope.emit(
                 error: "An error has occurred while validating certificate chain",
                 underlyingError: error

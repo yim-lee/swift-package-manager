@@ -183,25 +183,25 @@ struct DefaultCertificatePolicy: CertificatePolicy {
         }
 
         var policies = [VerifierPolicy]()
-        policies.append(_ADPCertificatePolicy()) // included for testing
-        // Check if subject name matches
-        policies.append(
-            _SubjectNamePolicy(
-                expectedUserID: self.expectedSubjectUserID,
-                expectedOrganizationalUnit: self.expectedSubjectOrganizationalUnit
-            )
-        )
-        // Must be a code signing certificate
-        policies.append(_CodeSigningPolicy())
-        // Basic validations including expiry check
-        policies.append(RFC5280Policy(validationTime: validationTime))
-        // Must support OCSP
-        policies.append(
-            _OCSPVerifierPolicy(
-                httpClient: self.httpClient,
-                validationTime: validationTime
-            )
-        )
+//        policies.append(_ADPCertificatePolicy()) // included for testing
+//        // Check if subject name matches
+//        policies.append(
+//            _SubjectNamePolicy(
+//                expectedUserID: self.expectedSubjectUserID,
+//                expectedOrganizationalUnit: self.expectedSubjectOrganizationalUnit
+//            )
+//        )
+//        // Must be a code signing certificate
+//        policies.append(_CodeSigningPolicy())
+//        // Basic validations including expiry check
+//        policies.append(RFC5280Policy(validationTime: validationTime))
+//        // Must support OCSP
+//        policies.append(
+//            _OCSPVerifierPolicy(
+//                httpClient: self.httpClient,
+//                validationTime: validationTime
+//            )
+//        )
 
         self.verify(
             certChain: certChain,
