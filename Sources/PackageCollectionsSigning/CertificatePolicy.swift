@@ -163,7 +163,7 @@ print("policy init L162")
         var trustedRoots = [Certificate]()
         if let trustedRootCertsDir {
             trustedRoots
-                .append(contentsOf: Self.loadCerts(at: trustedRootCertsDir, observabilityScope: observabilityScope))
+                .append(contentsOf: Self.loadCerts(at: trustedRootCertsDir, observabilityScope: nil))
         }
 print("policy init L168: after loading trustedRootCertsDir")
         if let additionalTrustedRootCerts {
