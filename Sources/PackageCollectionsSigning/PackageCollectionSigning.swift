@@ -56,6 +56,7 @@ extension PackageCollectionSigner {
     ) {
         do {
             let privateKey = try Data(contentsOf: certPrivateKeyPath)
+print("signL59: privateKey: \(privateKey)")
             self.sign(
                 collection: collection,
                 certChainPaths: certChainPaths,
@@ -63,7 +64,9 @@ extension PackageCollectionSigner {
                 certPolicyKey: certPolicyKey,
                 callback: callback
             )
+print("signL67: after sign")
         } catch {
+print("signL69: sign failed with error \(error)")
             callback(.failure(error))
         }
     }
